@@ -14,8 +14,5 @@ cassini: cassini.o timing-text-io.o helpers.o
 saturnd: saturnd.o
 	$(CC) $(CFLAGS) -o saturnd _build/saturnd.o
 
-saturnd.o: src/saturnd.c
-	$(CC) $(CFLAGS) $(INCLUDES) -c src/saturnd.c -o _build/saturnd.o
-
 distclean:
 	$(RM) -r cassini saturnd *.o _build/

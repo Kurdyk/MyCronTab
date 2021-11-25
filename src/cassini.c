@@ -37,30 +37,12 @@ const char usage_info[] = "\
      -p PIPES_DIR -> look for the pipes in PIPES_DIR (default: /tmp/<USERNAME>/saturnd/pipes)\n\
 ";
 
-void process_task(uint16_t operation, PIPES *pipes)
-{
-  if (operation == CLIENT_REQUEST_LIST_TASKS)
-  {
-    uint16_t converti = htons(operation);
-    write(pipes->bonny, &converti, sizeof(operation));
-    TASKS *tasks = get_list_answer(pipes);
-    char * string_rep = malloc(sizeof(char) * 100);
-    for (int i = 0; i < tasks->nbtasks; i ++){
-      timing_string_from_timing(string_rep, &(tasks->tasks[i]->timing));
-      printf("%ld: %s ", tasks->tasks[i]->taskid, string_rep);
-      for (int j = 0; j < tasks->tasks[i]->commandline->argc; j++){
-        printf("%s ", tasks->tasks[i]->commandline->arguments[j]->content);
-      }
-      printf("\n");
-    }
-    printf("On fait planter le test\n");
-  }
-}
-
 int main(int argc, char *argv[])
 {
   errno = 0;
   PIPES *pipes = NULL;
+
+  int create_nb_args = 1;
 
   char *minutes_str = "*";
   char *hours_str = "*";
@@ -81,15 +63,19 @@ int main(int argc, char *argv[])
     {
     case 'm':
       minutes_str = optarg;
+      create_nb_args += 2;
       break;
     case 'H':
       hours_str = optarg;
+      create_nb_args += 2;
       break;
     case 'd':
       daysofweek_str = optarg;
+      create_nb_args += 2;
       break;
     case 'p':
       pipes_directory = strdup(optarg);
+      create_nb_args += 2;
       if (pipes_directory == NULL)
         goto error;
       break;
@@ -99,6 +85,7 @@ int main(int argc, char *argv[])
       break;
     case 'c':
       operation = CLIENT_REQUEST_CREATE_TASK;
+      create_nb_args += 1;
       break;
     case 'q':
       operation = CLIENT_REQUEST_TERMINATE;
@@ -146,7 +133,70 @@ int main(int argc, char *argv[])
     goto error;
   }
 
-  process_task(operation, pipes);
+  uint16_t converti = htobe16(operation);
+  switch (operation)
+  {
+  case CLIENT_REQUEST_LIST_TASKS:
+  {
+    write(pipes->bonny, &converti, sizeof(operation));
+    TASKS *tasks = get_list_answer(pipes);
+    char *string_rep = malloc(sizeof(char) * 100);
+    for (int i = 0; i < tasks->nbtasks; i++)
+    {
+      timing_string_from_timing(string_rep, &(tasks->tasks[i]->timing));
+      printf("%ld: %s ", tasks->tasks[i]->taskid, string_rep);
+      for (int j = 0; j < tasks->tasks[i]->commandline->argc; j++)
+      {
+        printf("%s ", tasks->tasks[i]->commandline->arguments[j]->content);
+      }
+      printf("\n");
+    }
+    break;
+  }
+  case CLIENT_REQUEST_CREATE_TASK:
+  {
+    /// ENVOI DES DONNEES A TRAVERS BONNY
+    STRING *arguments = malloc(sizeof(STRING) * (argc - create_nb_args));
+    for (int i = 0; i < (argc - create_nb_args); i++)
+    {
+      arguments[i].length = strlen(argv[create_nb_args + i]);
+      arguments[i].content = argv[create_nb_args + i];
+    }
+    uint32_t nbargs = argc - create_nb_args;
+
+    TIMING *timing = malloc(sizeof(TIMING));
+    timing_from_strings(timing, minutes_str, hours_str, daysofweek_str);
+    timing->minutes = htobe64(timing->minutes);
+    timing->hours = htobe32(timing->hours);
+
+    write(pipes->bonny, &(converti), sizeof(converti));
+    write(pipes->bonny, (&timing->minutes), sizeof(timing->minutes));
+    write(pipes->bonny, &(timing->hours), sizeof(timing->hours));
+    write(pipes->bonny, &(timing->daysofweek), sizeof(timing->daysofweek));
+    uint32_t nbargs_revesed = htobe32(nbargs);
+    uint32_t strlen_revesed;
+    write(pipes->bonny, &(nbargs_revesed), sizeof(nbargs_revesed));
+    for (int i = 0; i < nbargs; i++)
+    {
+      strlen_revesed = htobe32(arguments[i].length);
+      write(pipes->bonny, &strlen_revesed, sizeof(strlen_revesed));
+      for (int j = 0; j < arguments[i].length; j++)
+      {
+        write(pipes->bonny, arguments[i].content + j, 1);
+      }
+    }
+
+    /// RECEPTION DE LA REPONSE DANS CLYDE
+    uint16_t reptype;
+    uint64_t taskid;
+
+    read(pipes->clyde, &reptype, sizeof(reptype));
+    read(pipes->clyde, &taskid, sizeof(taskid));
+    taskid = be64toh(taskid);
+    printf("%d\n", taskid);
+
+  }
+  }
   return EXIT_SUCCESS;
 
 error:
