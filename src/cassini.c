@@ -1,4 +1,22 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <errno.h>
+#if __APPLE__
+#include "endianmac.h"
+#else
+#include <endian.h>
+#endif
+
 #include "cassini.h"
+#include "timing.h"
+#include "timing-text-io.h"
+#include "helpers.h"
 
 const char usage_info[] = "\
    usage: cassini [OPTIONS] -l -> list all tasks\n\
@@ -19,21 +37,48 @@ const char usage_info[] = "\
      -p PIPES_DIR -> look for the pipes in PIPES_DIR (default: /tmp/<USERNAME>/saturnd/pipes)\n\
 ";
 
-int main(int argc, char * argv[]) {
+void process_task(uint16_t operation, PIPES *pipes)
+{
+  if (operation == CLIENT_REQUEST_LIST_TASKS)
+  {
+    uint16_t converti = htons(operation);
+    write(pipes->bonny, &converti, sizeof(operation));
+    TASKS *tasks = get_list_answer(pipes);
+    char * string_rep = malloc(sizeof(char) * 100);
+    for (int i = 0; i < tasks->nbtasks; i ++){
+      timing_string_from_timing(string_rep, &(tasks->tasks[i]->timing));
+      printf("%ld: %s ", tasks->tasks[i]->taskid, string_rep);
+      for (int j = 0; j < tasks->tasks[i]->commandline->argc; j++){
+        printf("%s ", tasks->tasks[i]->commandline->arguments[j]->content);
+      }
+      printf("\n");
+    }
+    printf("On fait planter le test\n");
+  }
+}
+
+int main(int argc, char *argv[])
+{
   errno = 0;
-  
-  char * minutes_str = "*";
-  char * hours_str = "*";
-  char * daysofweek_str = "*";
-  char * pipes_directory = NULL;
-  
+  PIPES *pipes = NULL;
+
+  char *minutes_str = "*";
+  char *hours_str = "*";
+  char *daysofweek_str = "*";
+  char *username = malloc(sizeof(char) * 50);
+  getlogin_r(username, 50);
+  char *pipes_directory = malloc(sizeof(char) * 100);
+  sprintf(pipes_directory, "/tmp/%s/saturnd/pipes", username);
+
   uint16_t operation = CLIENT_REQUEST_LIST_TASKS;
   uint64_t taskid;
-  
+
   int opt;
-  char * strtoull_endp;
-  while ((opt = getopt(argc, argv, "hlcqm:H:d:p:r:x:o:e:")) != -1) {
-    switch (opt) {
+  char *strtoull_endp;
+  while ((opt = getopt(argc, argv, "hlcqm:H:d:p:r:x:o:e:")) != -1)
+  {
+    switch (opt)
+    {
     case 'm':
       minutes_str = optarg;
       break;
@@ -45,9 +90,11 @@ int main(int argc, char * argv[]) {
       break;
     case 'p':
       pipes_directory = strdup(optarg);
-      if (pipes_directory == NULL) goto error;
+      if (pipes_directory == NULL)
+        goto error;
       break;
     case 'l':
+      //printf("On a l'option -l\n");
       operation = CLIENT_REQUEST_LIST_TASKS;
       break;
     case 'c':
@@ -59,22 +106,26 @@ int main(int argc, char * argv[]) {
     case 'r':
       operation = CLIENT_REQUEST_REMOVE_TASK;
       taskid = strtoull(optarg, &strtoull_endp, 10);
-      if (strtoull_endp == optarg || strtoull_endp[0] != '\0') goto error;
+      if (strtoull_endp == optarg || strtoull_endp[0] != '\0')
+        goto error;
       break;
     case 'x':
       operation = CLIENT_REQUEST_GET_TIMES_AND_EXITCODES;
       taskid = strtoull(optarg, &strtoull_endp, 10);
-      if (strtoull_endp == optarg || strtoull_endp[0] != '\0') goto error;
+      if (strtoull_endp == optarg || strtoull_endp[0] != '\0')
+        goto error;
       break;
     case 'o':
       operation = CLIENT_REQUEST_GET_STDOUT;
       taskid = strtoull(optarg, &strtoull_endp, 10);
-      if (strtoull_endp == optarg || strtoull_endp[0] != '\0') goto error;
+      if (strtoull_endp == optarg || strtoull_endp[0] != '\0')
+        goto error;
       break;
     case 'e':
       operation = CLIENT_REQUEST_GET_STDERR;
       taskid = strtoull(optarg, &strtoull_endp, 10);
-      if (strtoull_endp == optarg || strtoull_endp[0] != '\0') goto error;
+      if (strtoull_endp == optarg || strtoull_endp[0] != '\0')
+        goto error;
       break;
     case 'h':
       printf("%s", usage_info);
@@ -88,13 +139,26 @@ int main(int argc, char * argv[]) {
   // --------
   // | TODO |
   // --------
-  
+
+  pipes = init_pipes(pipes_directory);
+  if (pipes == NULL)
+  {
+    goto error;
+  }
+
+  process_task(operation, pipes);
   return EXIT_SUCCESS;
 
- error:
-  if (errno != 0) perror("main");
+error:
+  if (errno != 0)
+    perror("main");
   free(pipes_directory);
+  if (pipes != NULL)
+  {
+    close(pipes->bonny);
+    close(pipes->clyde);
+  }
+  free(pipes);
   pipes_directory = NULL;
   return EXIT_FAILURE;
 }
-

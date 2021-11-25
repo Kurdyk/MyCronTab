@@ -3,17 +3,17 @@
 #enable -f sleep sleep
 
 CASSINI=./cassini
-PIPESDIR=./run/pipes
+PIPESDIR=/tmp
 TESTSDIR=./tests
 PATTERN=cassini-test-
 
 TMP1=$(mktemp)
 TMP2=$(mktemp)
 
-REQUEST_PIPE=saturnd-request-pipe
-REPLY_PIPE=saturnd-reply-pipe
+REQUEST_PIPE=bonny.pipe
+REPLY_PIPE=clyde.pipe
 
-TIMEOUT=3
+TIMEOUT=300
 
 if ! command -v timeout >/dev/null 2>&1
 then
@@ -34,8 +34,8 @@ then
 fi
 
 if [ ! -d "$PIPESDIR" ]; then mkdir -p "$PIPESDIR"; fi
-if [ ! -p "$PIPESDIR/$REQUEST_PIPE" ]; then mkfifo "$PIPESDIR/$REQUEST_PIPE"; chmod 600 "$PIPESDIR/$REQUEST_PIPE"; fi
-if [ ! -p "$PIPESDIR/$REPLY_PIPE" ]; then mkfifo "$PIPESDIR/$REPLY_PIPE"; chmod 600 "$PIPESDIR/$REPLY_PIPE"; fi
+if [ ! -p "$PIPESDIR/$REQUEST_PIPE" ]; then mkfifo "$PIPESDIR/$REQUEST_PIPE"; chmod 777 "$PIPESDIR/$REQUEST_PIPE"; fi
+if [ ! -p "$PIPESDIR/$REPLY_PIPE" ]; then mkfifo "$PIPESDIR/$REPLY_PIPE"; chmod 777 "$PIPESDIR/$REPLY_PIPE"; fi
 #if [ ! -e "$PIPESDIR/cassini-lock" ]; then touch "$PIPESDIR/cassini-lock"; fi
 
 normalize_output() {
@@ -98,6 +98,7 @@ run_test() {
     echo -e "\nWith reply:"
     hexdump -C "$CURDIR/reply"
     echo -e "\nExited with code $RES instead of $EXPECTED_RES"
+    cat "$TMP2"
     return 1
   fi
 

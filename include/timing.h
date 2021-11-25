@@ -3,10 +3,10 @@
 
 #include <stdint.h>
 
-struct timing {
+typedef struct timing_struct {
   uint64_t minutes;
   uint32_t hours;
   uint8_t daysofweek;
-};
+} TIMING;
 
 #endif // TIMING_H
