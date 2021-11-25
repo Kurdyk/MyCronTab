@@ -1,4 +1,9 @@
 #include <fcntl.h>
+#if __APPLE__
+#include "endianmac.h"
+#else
+#include <endian.h>
+#endif
 
 #include "helpers.h"
 #include "server-reply.h"

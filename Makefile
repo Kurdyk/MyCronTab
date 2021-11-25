@@ -5,22 +5,17 @@ INCLUDES ?= -I include/
 all: cassini saturnd
 
 cassini: cassini.o timing-text-io.o helpers.o
-	$(CC) $(CFLAGS) -o cassini cassini.o timing-text-io.o helpers.o
+	$(CC) $(CFLAGS) -o cassini _build/cassini.o _build/timing-text-io.o _build/helpers.o
 
-timing-text-io.o: src/timing-text-io.c
-	$(CC) $(CFLAGS) $(INCLUDES) -c src/timing-text-io.c -o timing-text-io.o
-
-helpers.o: src/helpers.c
-	$(CC) $(CFLAGS) $(INCLUDES) -c src/helpers.c -o helpers.o
-
-cassini.o: src/cassini.c
-	$(CC) $(CFLAGS) $(INCLUDES) -c src/cassini.c -o cassini.o
+%.o: src/%.c
+	mkdir -p _build/
+	@$(CC) $(INCLUDES) -c $< -o _build/$@
 
 saturnd: saturnd.o
-	$(CC) $(CFLAGS) -o saturnd saturnd.o
+	$(CC) $(CFLAGS) -o saturnd _build/saturnd.o
 
 saturnd.o: src/saturnd.c
-	$(CC) $(CFLAGS) $(INCLUDES) -c src/saturnd.c -o saturnd.o
+	$(CC) $(CFLAGS) $(INCLUDES) -c src/saturnd.c -o _build/saturnd.o
 
 distclean:
-	$(RM) cassini saturnd *.o
+	$(RM) -r cassini saturnd *.o _build/
