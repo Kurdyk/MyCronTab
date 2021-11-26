@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <time.h>
 #if __APPLE__
 #include "endianmac.h"
 #else
@@ -125,6 +126,16 @@ void get_timing(PIPES *pipes, TIMING *timing)
   read(pipes->clyde, &(timing->daysofweek), sizeof(timing->daysofweek));
   timing->minutes = be64toh(timing->minutes);
   timing->hours = be32toh(timing->hours);
+}
+
+//////////////   Pour l'option -x    ////////////
+
+char* time_output_from_int64(int64_t sec) {
+
+    char* buff = malloc(sizeof(char)*20);
+    strftime(buff, 20, "%Y-%m-%d %H:%M:%S", localtime(&sec));
+    return buff;
+
 }
 
 
