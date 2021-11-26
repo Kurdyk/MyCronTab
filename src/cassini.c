@@ -196,6 +196,27 @@ int main(int argc, char *argv[])
     printf("%d\n", taskid);
 
   }
+
+  case CLIENT_REQUEST_GET_STDOUT: case CLIENT_REQUEST_GET_STDERR:
+      write(pipes->bonny, &converti, sizeof(operation));
+      uint64_t id = htobe64(taskid);
+      write(pipes->bonny, &id, sizeof(uint64_t));
+      uint16_t reptype;
+      read(pipes->clyde, &reptype, sizeof(uint16_t));
+          switch (be16toh(reptype)) {
+              case SERVER_REPLY_OK: ;
+                  STRING* output = get_string(pipes);
+                  printf("%s", output->content);
+                  free(output);
+                  break;
+              case SERVER_REPLY_ERROR: ;
+                  exit(1);
+                  break;
+              default:
+                  printf("Unexpected answer\n");
+                  goto error;
+          }
+
   }
   return EXIT_SUCCESS;
 
