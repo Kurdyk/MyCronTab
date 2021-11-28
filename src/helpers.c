@@ -114,6 +114,7 @@ TASKS *get_list_answer(PIPES *pipes)
     (tasks->tasks)[i] = get_task(pipes);
   }
   tasks->nbtasks = headers->nbtasks;
+  free(headers);
   return tasks;
 }
 

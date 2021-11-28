@@ -64,6 +64,7 @@ run_test() {
   PID1=$!
   timeout $TIMEOUT cat "$PIPESDIR/$REQUEST_PIPE" > "$TMP1" &
   PID2=$!
+  #timeout $TIMEOUT valgrind --leak-check=full --track-origins=yes --dsymutil=yes $CASSINI -p "$PIPESDIR" "${ARGS[@]}" > "$TMP2" 2>/dev/null
   timeout $TIMEOUT $CASSINI -p "$PIPESDIR" "${ARGS[@]}" > "$TMP2" 2>/dev/null
   RES=$?
   CMD="$CASSINI -p '$PIPESDIR' ${ARGS_ESC[@]}"

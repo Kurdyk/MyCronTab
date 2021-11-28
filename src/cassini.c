@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
   getlogin_r(username, 50);
   char *pipes_directory = malloc(sizeof(char) * 100);
   sprintf(pipes_directory, "/tmp/%s/saturnd/pipes", username);
+  free(username);
 
   uint16_t operation = CLIENT_REQUEST_LIST_TASKS;
   uint64_t taskid;
@@ -74,6 +75,7 @@ int main(int argc, char *argv[])
       create_nb_args += 2;
       break;
     case 'p':
+      free(pipes_directory);
       pipes_directory = strdup(optarg);
       create_nb_args += 2;
       if (pipes_directory == NULL)
@@ -128,6 +130,7 @@ int main(int argc, char *argv[])
   // --------
 
   pipes = init_pipes(pipes_directory);
+  free(pipes_directory);
   if (pipes == NULL)
   {
     goto error;
@@ -151,6 +154,19 @@ int main(int argc, char *argv[])
       }
       printf("\n");
     }
+    free(string_rep);
+    for (int i = 0; i < tasks->nbtasks; i++){
+      for(int j = 0; j < tasks->tasks[i]->commandline->argc; j++){
+        free(tasks->tasks[i]->commandline->arguments[j]->content);
+        free(tasks->tasks[i]->commandline->arguments[j]);
+      }
+      free(tasks->tasks[i]->commandline->arguments);
+      free(tasks->tasks[i]->commandline);
+      free(tasks->tasks[i]);
+    };
+    free(tasks->tasks);
+    free(tasks);
+    
     break;
   }
   case CLIENT_REQUEST_CREATE_TASK:
@@ -170,7 +186,7 @@ int main(int argc, char *argv[])
     timing->hours = htobe32(timing->hours);
 
     write(pipes->bonny, &(converti), sizeof(converti));
-    write(pipes->bonny, (&timing->minutes), sizeof(timing->minutes));
+    write(pipes->bonny, &(timing->minutes), sizeof(timing->minutes));
     write(pipes->bonny, &(timing->hours), sizeof(timing->hours));
     write(pipes->bonny, &(timing->daysofweek), sizeof(timing->daysofweek));
     uint32_t nbargs_revesed = htobe32(nbargs);
@@ -194,6 +210,9 @@ int main(int argc, char *argv[])
     read(pipes->clyde, &taskid, sizeof(taskid));
     taskid = be64toh(taskid);
     printf("%ld\n", taskid);
+
+    free(arguments);
+    free(timing);
     break;
   }
 
@@ -292,6 +311,9 @@ int main(int argc, char *argv[])
   }
 
   }
+  close(pipes->bonny);
+  close(pipes->clyde);
+  free(pipes);
   return EXIT_SUCCESS;
 
 error:
