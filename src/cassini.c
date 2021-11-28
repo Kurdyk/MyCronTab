@@ -228,6 +228,7 @@ int main(int argc, char *argv[])
       case SERVER_REPLY_OK: ;
         STRING *output = get_string(pipes);
         printf("%s\n", output->content);
+        free(output->content);
         free(output);
         break;
       case SERVER_REPLY_ERROR: ;
@@ -247,20 +248,25 @@ int main(int argc, char *argv[])
       write(pipes->bonny, &id, sizeof(uint64_t));
       uint16_t reptype;
       read(pipes->clyde, &reptype, sizeof(uint16_t));
+
           switch (be16toh(reptype)) {
               case SERVER_REPLY_OK: ;
                   STRING* output = get_string(pipes);
                   printf("%s", output->content);
+                  free(output->content);
                   free(output);
                   break;
               case SERVER_REPLY_ERROR: ;
-                  exit(1);
+                  uint16_t exitcode;
+                  read(pipes->clyde, &exitcode, sizeof(uint16_t));
+                  goto error;
                   break;
               default:
                   printf("Unexpected answer\n");
                   goto error;
           }
           break;
+  break;
 
       case CLIENT_REQUEST_GET_TIMES_AND_EXITCODES:
           write(pipes->bonny, &converti, sizeof(operation));
@@ -285,16 +291,19 @@ int main(int argc, char *argv[])
                       free(aff);
 
                   }
+                  break;
 
-                  break;
               case SERVER_REPLY_ERROR:
-                  exit(1);
+                  read(pipes->clyde, &exitcode, sizeof(uint16_t));
+                  goto error;
                   break;
+
               default:
                   printf("Unexpected answer");
                   goto error;
           }
-              break;
+          break;
+  break;
 
   case CLIENT_REQUEST_TERMINATE:
   {
@@ -304,6 +313,7 @@ int main(int argc, char *argv[])
     if (be16toh(reptype) == SERVER_REPLY_OK) {
       STRING *output = get_string(pipes);
       printf("%s\n", output->content);
+      free(output->content);
       free(output);
     } else{
       goto error;
@@ -319,7 +329,6 @@ int main(int argc, char *argv[])
 error:
   if (errno != 0)
     perror("main");
-  free(pipes_directory);
   if (pipes != NULL)
   {
     close(pipes->bonny);
