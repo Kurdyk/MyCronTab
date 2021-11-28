@@ -80,4 +80,5 @@ TASKS *get_list_answer(PIPES *pipes);
 
 
 void get_timing(PIPES *pipes, TIMING *timing);
+char* time_output_from_int64(int64_t sec);
 #endif
