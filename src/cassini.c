@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
     };
     free(tasks->tasks);
     free(tasks);
-    
+
     break;
   }
   case CLIENT_REQUEST_CREATE_TASK:
@@ -225,14 +225,12 @@ int main(int argc, char *argv[])
     uint16_t reptype;
     read(pipes->clyde, &reptype, sizeof(uint16_t));
     switch (be16toh(reptype)) {
-      case SERVER_REPLY_OK: ;
-        STRING *output = get_string(pipes);
-        printf("%s\n", output->content);
-        free(output->content);
-        free(output);
+      case SERVER_REPLY_OK:
         break;
       case SERVER_REPLY_ERROR: ;
-        exit(1);
+        uint16_t exitcode;
+        read(pipes->clyde, &exitcode, sizeof(uint16_t));
+        goto error;
         break;
       default:
           printf("Unexpected answer\n");
@@ -310,14 +308,11 @@ int main(int argc, char *argv[])
     write(pipes->bonny, &converti, sizeof(operation));
     uint16_t reptype;
     read(pipes->clyde, &reptype, sizeof(uint16_t));
-    if (be16toh(reptype) == SERVER_REPLY_OK) {
-      STRING *output = get_string(pipes);
-      printf("%s\n", output->content);
-      free(output->content);
-      free(output);
-    } else{
+    if (be16toh(reptype) != SERVER_REPLY_OK) {
+      printf("Unexpected answer");
       goto error;
     }
+    break;
   }
 
   }
