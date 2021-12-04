@@ -51,7 +51,9 @@ int main(int argc, char *argv[])
   getlogin_r(username, 50);
   char *pipes_directory = malloc(sizeof(char) * 100);
   sprintf(pipes_directory, "/tmp/%s/saturnd/pipes", username);
-  free(username);
+  //sprintf(pipes_directory, "/tmp");
+
+    free(username);
 
   uint16_t operation = CLIENT_REQUEST_LIST_TASKS;
   uint64_t taskid;

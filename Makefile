@@ -12,7 +12,7 @@ cassini: cassini.o timing-text-io.o helpers.o
 	@$(CC) $(INCLUDES) -c $< -o _build/$@
 
 saturnd: saturnd.o
-	$(CC) $(CFLAGS) -o saturnd _build/saturnd.o
+	$(CC) $(CFLAGS) -o saturnd _build/saturnd.o _build/timing-text-io.o _build/helpers.o
 
 distclean:
 	$(RM) -r cassini saturnd *.o _build/
