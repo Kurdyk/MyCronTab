@@ -18,8 +18,8 @@ PIPES *init_pipes(char *pipes_directory)
 {
   char *bonny_name = malloc(sizeof(char) * 110);
   char *clyde_name = malloc(sizeof(char) * 110);
-  sprintf(bonny_name, "%s/bonny.pipe", pipes_directory);
-  sprintf(clyde_name, "%s/clyde.pipe", pipes_directory);
+  sprintf(bonny_name, "%s/saturnd-request-pipe", pipes_directory);
+  sprintf(clyde_name, "%s/saturnd-reply-pipe", pipes_directory);
   int fdwrite = open(bonny_name, O_WRONLY);
   int fdread = open(clyde_name, O_RDONLY);
   if (fdwrite == -1 || fdread == -1)
