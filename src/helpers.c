@@ -139,4 +139,43 @@ char* time_output_from_int64(int64_t sec) {
 
 }
 
+//////////////  Pour saturnd   ////////////////////
+
+STRING* read_string(PIPES *pipes)
+{
+    STRING *string = malloc(sizeof(STRING));
+    read(pipes->bonny, &(string->length), sizeof(string->length));
+    string->length = be32toh(string->length);
+    string->content = malloc((string->length + 1) * sizeof(char));
+    for (int i = 0; i < string->length; i++)
+    {
+        read(pipes->bonny, (string->content + i), 1);
+    }
+    *(string->content + string->length) = '\0';
+    return string;
+}
+
+void read_timing(PIPES *pipes, TIMING *timing)
+{
+    read(pipes->bonny, &(timing->minutes), sizeof(timing->minutes));
+    read(pipes->bonny, &(timing->hours), sizeof(timing->hours));
+    read(pipes->bonny, &(timing->daysofweek), sizeof(timing->daysofweek));
+    timing->minutes = be64toh(timing->minutes);
+    timing->hours = be32toh(timing->hours);
+}
+
+
+COMMANDLINE* read_commandline(PIPES *pipes)
+{
+    COMMANDLINE *commandline = malloc(sizeof(COMMANDLINE));
+    read(pipes->bonny, &(commandline->argc), sizeof(commandline->argc));
+    commandline->argc = be32toh(commandline->argc);
+    commandline->arguments = malloc(commandline->argc * sizeof(char *));
+    for (int i = 0; i < commandline->argc; i++)
+    {
+        commandline->arguments[i] = read_string(pipes);
+    }
+    return commandline;
+}
+
 

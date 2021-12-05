@@ -51,7 +51,9 @@ int main(int argc, char *argv[])
   getlogin_r(username, 50);
   char *pipes_directory = malloc(sizeof(char) * 100);
   sprintf(pipes_directory, "/tmp/%s/saturnd/pipes", username);
-  free(username);
+  //sprintf(pipes_directory, "/tmp");
+
+    free(username);
 
   uint16_t operation = CLIENT_REQUEST_LIST_TASKS;
   uint64_t taskid;
@@ -166,7 +168,7 @@ int main(int argc, char *argv[])
     };
     free(tasks->tasks);
     free(tasks);
-    
+
     break;
   }
   case CLIENT_REQUEST_CREATE_TASK:
@@ -225,13 +227,12 @@ int main(int argc, char *argv[])
     uint16_t reptype;
     read(pipes->clyde, &reptype, sizeof(uint16_t));
     switch (be16toh(reptype)) {
-      case SERVER_REPLY_OK: ;
-        STRING *output = get_string(pipes);
-        printf("%s\n", output->content);
-        free(output);
+      case SERVER_REPLY_OK:
         break;
       case SERVER_REPLY_ERROR: ;
-        exit(1);
+        uint16_t exitcode;
+        read(pipes->clyde, &exitcode, sizeof(uint16_t));
+        goto error;
         break;
       default:
           printf("Unexpected answer\n");
@@ -247,20 +248,25 @@ int main(int argc, char *argv[])
       write(pipes->bonny, &id, sizeof(uint64_t));
       uint16_t reptype;
       read(pipes->clyde, &reptype, sizeof(uint16_t));
+
           switch (be16toh(reptype)) {
               case SERVER_REPLY_OK: ;
                   STRING* output = get_string(pipes);
                   printf("%s", output->content);
+                  free(output->content);
                   free(output);
                   break;
               case SERVER_REPLY_ERROR: ;
-                  exit(1);
+                  uint16_t exitcode;
+                  read(pipes->clyde, &exitcode, sizeof(uint16_t));
+                  goto error;
                   break;
               default:
                   printf("Unexpected answer\n");
                   goto error;
           }
           break;
+  break;
 
       case CLIENT_REQUEST_GET_TIMES_AND_EXITCODES:
           write(pipes->bonny, &converti, sizeof(operation));
@@ -285,29 +291,30 @@ int main(int argc, char *argv[])
                       free(aff);
 
                   }
+                  break;
 
-                  break;
               case SERVER_REPLY_ERROR:
-                  exit(1);
+                  read(pipes->clyde, &exitcode, sizeof(uint16_t));
+                  goto error;
                   break;
+
               default:
                   printf("Unexpected answer");
                   goto error;
           }
-              break;
+          break;
+  break;
 
   case CLIENT_REQUEST_TERMINATE:
   {
     write(pipes->bonny, &converti, sizeof(operation));
     uint16_t reptype;
     read(pipes->clyde, &reptype, sizeof(uint16_t));
-    if (be16toh(reptype) == SERVER_REPLY_OK) {
-      STRING *output = get_string(pipes);
-      printf("%s\n", output->content);
-      free(output);
-    } else{
+    if (be16toh(reptype) != SERVER_REPLY_OK) {
+      printf("Unexpected answer");
       goto error;
     }
+    break;
   }
 
   }
@@ -319,7 +326,6 @@ int main(int argc, char *argv[])
 error:
   if (errno != 0)
     perror("main");
-  free(pipes_directory);
   if (pipes != NULL)
   {
     close(pipes->bonny);

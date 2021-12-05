@@ -80,5 +80,18 @@ TASKS *get_list_answer(PIPES *pipes);
 
 
 void get_timing(PIPES *pipes, TIMING *timing);
+
+//////////////   Pour l'option -x    ////////////
+
+
 char* time_output_from_int64(int64_t sec);
+
+
+//////////////  Pour saturnd   ////////////////////
+
+STRING* read_string(PIPES *pipes);
+void read_timing(PIPES *pipes, TIMING *timing);
+COMMANDLINE* read_commandline(PIPES *pipes);
+
+
 #endif
