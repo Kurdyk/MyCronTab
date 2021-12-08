@@ -1,7 +1,7 @@
 image: gcc
 
 before_script:
-    - apt update && apt -y install make autoconf bsdmainutils valgrind
+    - apt update && apt -y install make autoconf bsdmainutils valgrind systemd
     - timedatectl set-timezone Europe/Paris
     - timedatectl
 
