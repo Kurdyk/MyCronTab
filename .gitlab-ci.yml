@@ -2,7 +2,8 @@ image: gcc
 
 before_script:
     - apt update && apt -y install make autoconf bsdmainutils valgrind
-    - echo "Europe/Paris" > /etc/timezone
+    - rm -rf /etc/localtime
+    - ln -s /usr/share/zoneinfo/Europe/Paris /etc/localtime
     - date
 
 build-cassini:
