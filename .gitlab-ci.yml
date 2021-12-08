@@ -1,18 +1,19 @@
 image: gcc
 
 before_script:
-    - apt update && apt -y install make autoconf
+    - apt update && apt -y install make autoconf hexdump valgrind
 
 build:
   stage: build
   script:
+    - gcc --version
     - make cassini
   artifacts:
     paths:
       - cassini
   cache:
     paths:
-      - "*.o"
+      - "_build/*.o"
 
 test:
   stage: test
