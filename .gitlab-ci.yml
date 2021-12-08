@@ -1,9 +1,9 @@
 image: gcc
 
 before_script:
-    - apt update && apt -y install make autoconf hexdump valgrind
+    - apt update && apt -y install make autoconf bsdmainutils valgrind
 
-build:
+build-cassini:
   stage: build
   script:
     - gcc --version
@@ -15,7 +15,7 @@ build:
     paths:
       - "_build/*.o"
 
-test:
+test-cassini:
   stage: test
   script:
     - ./run-cassini-tests.sh
