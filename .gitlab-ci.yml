@@ -1,0 +1,20 @@
+image: gcc
+
+before_script:
+    - apt update && apt -y install make autoconf
+
+build:
+  stage: build
+  script:
+    - make cassini
+  artifacts:
+    paths:
+      - cassini
+  cache:
+    paths:
+      - "*.o"
+
+test:
+  stage: test
+  script:
+    - ./run-cassini-tests.sh
