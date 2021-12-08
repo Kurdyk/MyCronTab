@@ -1,8 +1,9 @@
 image: gcc
 
 before_script:
-    - apt update && apt -y install make autoconf bsdmainutils valgrind systemd
-    - cat /etc/timezone
+    - apt update && apt -y install make autoconf bsdmainutils valgrind
+    - echo "Europe/Paris" > /etc/timezone
+    - date
 
 build-cassini:
   stage: build
