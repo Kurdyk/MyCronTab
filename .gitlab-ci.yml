@@ -2,7 +2,7 @@ image: gcc
 
 before_script:
     - apt update && apt -y install make autoconf bsdmainutils valgrind
-    - sudo timedatectl set-timezone Europe/Paris
+    - timedatectl set-timezone Europe/Paris
     - timedatectl
 
 build-cassini:
