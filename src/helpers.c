@@ -21,7 +21,8 @@ PIPES *init_pipes(char *pipes_directory)
   sprintf(bonny_name, "%s/saturnd-request-pipe", pipes_directory);
   sprintf(clyde_name, "%s/saturnd-reply-pipe", pipes_directory);
   int fdwrite = open(bonny_name, O_WRONLY);
-  int fdread = open(clyde_name, O_RDONLY);
+  //int fdread = open(clyde_name, O_RDONLY);
+  int fdread = 12;
   if (fdwrite == -1 || fdread == -1)
   {
     return NULL;
@@ -34,6 +35,14 @@ PIPES *init_pipes(char *pipes_directory)
   return pipes;
 }
 
+
+void open_read(PIPES * pipes, char *pipes_directory){
+  char *clyde_name = malloc(sizeof(char) * 110);
+  sprintf(clyde_name, "%s/saturnd-reply-pipe", pipes_directory);
+  int fdread = open(clyde_name, O_RDONLY);
+  pipes->clyde = fdread;
+  free(clyde_name);
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// Gestion des contenus //////////////////////////////////

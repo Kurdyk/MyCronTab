@@ -19,6 +19,8 @@ typedef struct
 
 PIPES *init_pipes(char *pipes_directory);
 
+void open_read(PIPES * pipes, char *pipes_directory);
+
 
 
 ////////////////////////////////////////////////////////////////////////////////////////

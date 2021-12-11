@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
   // --------
 
   pipes = init_pipes(pipes_directory);
-  free(pipes_directory);
+  //free(pipes_directory);
   if (pipes == NULL)
   {
     goto error;
@@ -144,6 +144,7 @@ int main(int argc, char *argv[])
   case CLIENT_REQUEST_LIST_TASKS:
   {
     write(pipes->bonny, &converti, sizeof(operation));
+    open_read(pipes, pipes_directory);
     TASKS *tasks = get_list_answer(pipes);
     char *string_rep = malloc(sizeof(char) * 100);
     for (int i = 0; i < tasks->nbtasks; i++)
@@ -207,7 +208,7 @@ int main(int argc, char *argv[])
     /// RECEPTION DE LA REPONSE DANS CLYDE
     uint16_t reptype;
     uint64_t taskid;
-
+    open_read(pipes, pipes_directory);
     read(pipes->clyde, &reptype, sizeof(reptype));
     read(pipes->clyde, &taskid, sizeof(taskid));
     taskid = be64toh(taskid);
@@ -223,7 +224,7 @@ int main(int argc, char *argv[])
     write(pipes->bonny, &converti, sizeof(operation));
     uint64_t id = htobe64(taskid);
     write(pipes->bonny, &id, sizeof(uint64_t));
-
+    open_read(pipes, pipes_directory);
     uint16_t reptype;
     read(pipes->clyde, &reptype, sizeof(uint16_t));
     switch (be16toh(reptype)) {
@@ -246,6 +247,7 @@ int main(int argc, char *argv[])
       write(pipes->bonny, &converti, sizeof(operation));
       uint64_t id = htobe64(taskid);
       write(pipes->bonny, &id, sizeof(uint64_t));
+      open_read(pipes, pipes_directory);
       uint16_t reptype;
       read(pipes->clyde, &reptype, sizeof(uint16_t));
 
@@ -272,6 +274,7 @@ int main(int argc, char *argv[])
           write(pipes->bonny, &converti, sizeof(operation));
           id = htobe64(taskid);
           write(pipes->bonny, &id, sizeof(uint64_t));
+          open_read(pipes, pipes_directory);
           read(pipes->clyde, &reptype, sizeof(uint16_t));
           switch (be16toh(reptype)) {
               case SERVER_REPLY_OK: ;
@@ -309,6 +312,7 @@ int main(int argc, char *argv[])
   {
     write(pipes->bonny, &converti, sizeof(operation));
     uint16_t reptype;
+    open_read(pipes, pipes_directory);
     read(pipes->clyde, &reptype, sizeof(uint16_t));
     if (be16toh(reptype) != SERVER_REPLY_OK) {
       printf("Unexpected answer");
@@ -321,9 +325,11 @@ int main(int argc, char *argv[])
   close(pipes->bonny);
   close(pipes->clyde);
   free(pipes);
+  free(pipes_directory);
   return EXIT_SUCCESS;
 
 error:
+  free(pipes_directory);
   if (errno != 0)
     perror("main");
   if (pipes != NULL)
