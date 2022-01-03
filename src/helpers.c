@@ -141,50 +141,57 @@ void get_timing(PIPES *pipes, TIMING *timing)
 //////////////   Pour l'option -x    ////////////
 
 char* time_output_from_int64(int64_t sec) {
-
     char* buff = malloc(sizeof(char)*20);
     strftime(buff, 20, "%Y-%m-%d %H:%M:%S", localtime(&sec));
     return buff;
-
 }
 
 //////////////  Pour saturnd   ////////////////////
 
-STRING* read_string(PIPES *pipes)
+STRING* read_string(int request_pipe)
 {
     STRING *string = malloc(sizeof(STRING));
-    read(pipes->bonny, &(string->length), sizeof(string->length));
+    read(request_pipe, &(string->length), sizeof(string->length));
     string->length = be32toh(string->length);
     string->content = malloc((string->length + 1) * sizeof(char));
     for (int i = 0; i < string->length; i++)
     {
-        read(pipes->bonny, (string->content + i), 1);
+        read(request_pipe, (string->content + i), 1);
     }
     *(string->content + string->length) = '\0';
     return string;
 }
 
-void read_timing(PIPES *pipes, TIMING *timing)
+void read_timing(int request_pipe, TIMING *timing)
 {
-    read(pipes->bonny, &(timing->minutes), sizeof(timing->minutes));
-    read(pipes->bonny, &(timing->hours), sizeof(timing->hours));
-    read(pipes->bonny, &(timing->daysofweek), sizeof(timing->daysofweek));
+    read(request_pipe, &(timing->minutes), sizeof(timing->minutes));
+    read(request_pipe, &(timing->hours), sizeof(timing->hours));
+    read(request_pipe, &(timing->daysofweek), sizeof(timing->daysofweek));
     timing->minutes = be64toh(timing->minutes);
     timing->hours = be32toh(timing->hours);
 }
 
 
-COMMANDLINE* read_commandline(PIPES *pipes)
+COMMANDLINE* read_commandline(int request_pipe)
 {
     COMMANDLINE *commandline = malloc(sizeof(COMMANDLINE));
-    read(pipes->bonny, &(commandline->argc), sizeof(commandline->argc));
+    read(request_pipe, &(commandline->argc), sizeof(commandline->argc));
     commandline->argc = be32toh(commandline->argc);
     commandline->arguments = malloc(commandline->argc * sizeof(char *));
     for (int i = 0; i < commandline->argc; i++)
     {
-        commandline->arguments[i] = read_string(pipes);
+        commandline->arguments[i] = read_string(request_pipe);
     }
     return commandline;
+}
+
+TASK* read_task(int request_pipe, uint8_t* current_id) {
+    TASK* res = malloc(sizeof(TASK));
+    read_timing(request_pipe, &(res->timing));
+    res->commandline = read_commandline(request_pipe);
+    res->taskid = *current_id;
+    (*current_id)++;
+    return res;
 }
 
 

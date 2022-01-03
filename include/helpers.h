@@ -6,7 +6,6 @@
 
 
 
-
 /////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// Gestion des Pipes //////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////
@@ -91,9 +90,10 @@ char* time_output_from_int64(int64_t sec);
 
 //////////////  Pour saturnd   ////////////////////
 
-STRING* read_string(PIPES *pipes);
-void read_timing(PIPES *pipes, TIMING *timing);
-COMMANDLINE* read_commandline(PIPES *pipes);
+STRING* read_string(int request_pipe);
+void read_timing(int request_pipe, TIMING *timing);
+COMMANDLINE* read_commandline(int request_pipe);
+TASK* read_task(int request_pipe, uint8_t* current_id);
 
 
 #endif
