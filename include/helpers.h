@@ -93,7 +93,7 @@ char* time_output_from_int64(int64_t sec);
 STRING* read_string(int request_pipe);
 void read_timing(int request_pipe, TIMING *timing);
 COMMANDLINE* read_commandline(int request_pipe);
-TASK* read_task(int request_pipe, uint8_t* current_id);
+TASK* read_task(int request_pipe);
 
 
 #endif

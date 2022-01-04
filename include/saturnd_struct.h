@@ -20,7 +20,7 @@
 
 void create_task_folder(TASK task);
 void notify_timing(TASK task);
-void create_task(TASK task);
+void create_task(TASK task, u_int64_t* taskid);
 int timings_data_file();
 void set_taskid(TASK* task, uint64_t* next_id);
 char* my_cat(char* start, char* end);

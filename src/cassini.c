@@ -50,8 +50,8 @@ int main(int argc, char *argv[])
   char *username = malloc(sizeof(char) * 50);
   getlogin_r(username, 50);
   char *pipes_directory = malloc(sizeof(char) * 100);
-  sprintf(pipes_directory, "/tmp/%s/saturnd/pipes", username);
-  //sprintf(pipes_directory, "/tmp");
+  //sprintf(pipes_directory, "/tmp/%s/saturnd/pipes", username);
+  sprintf(pipes_directory, "/tmp");
 
     free(username);
 

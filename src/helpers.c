@@ -185,12 +185,10 @@ COMMANDLINE* read_commandline(int request_pipe)
     return commandline;
 }
 
-TASK* read_task(int request_pipe, uint8_t* current_id) {
+TASK* read_task(int request_pipe) {
     TASK* res = malloc(sizeof(TASK));
     read_timing(request_pipe, &(res->timing));
     res->commandline = read_commandline(request_pipe);
-    res->taskid = *current_id;
-    (*current_id)++;
     return res;
 }
 

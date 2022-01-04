@@ -99,7 +99,8 @@ void notify_timing(TASK task) {
     close(fd);
 }
 
-void create_task(TASK task) {
+void create_task(TASK task, u_int64_t* taskid) {
+    set_taskid(&task, taskid);
     create_task_folder(task);
     notify_timing(task);
     uint16_t rep = htobe16(SERVER_REPLY_OK);
@@ -219,7 +220,6 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
                 int exit_status = WEXITSTATUS(status);
                 char buf[256];
                 sprintf(buf, "%d", exit_status);
-                printf("exit : %s\n", buf);
                 //TODO : trouver une meilleure alternative pour eviter log de 0.
                 write(ret_fd, buf, (size_t) log10(exit_status + 1) + 1) ;
                 close(ret_fd);
@@ -242,6 +242,9 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
 }
 
 int line_to_tokens(char *line, char **tokens) {
+    /*
+     * Gotten from TP8.
+     */
     int i = 0;
     memset(tokens, 0, MAX_TOKENS*sizeof(char*));
     while (line != NULL) {
