@@ -123,6 +123,7 @@ void set_next_id(uint64_t* next_id) {
             *next_id = max;
         }
     }
+    closedir(dirp);
 }
 
 
@@ -144,12 +145,12 @@ char* my_cat(char* start, char* end) {
 
 void check_exec_time() {
     size_t max_len = 1024;
-    char* buf = malloc(sizeof(char) * 1024);
+    char* buf = malloc(sizeof(char) * 256);
     FILE* file;
     file = fopen("daemon_dir/timings.txt", "r");
     flock(fileno(file), LOCK_EX);
     ssize_t nread = 0;
-    while ((nread = getline(&buf, &max_len, file)) != 0) {
+    while ((nread = getline(&buf, &max_len, file)) > 0) {
         if (nread < 0) {
             perror("read");
             exit(1);
@@ -187,7 +188,7 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
     }
 
     if (out_file != NULL) {
-        out_fd = open(out_file, flags | O_WRONLY | O_CREAT, 0666);
+        out_fd = open(out_file, flags | O_WRONLY | O_CREAT , 0666);
         if (out_fd < 0) goto error;
         if (dup2(out_fd, STDOUT_FILENO) == -1) goto error;
         close(out_fd);
@@ -200,6 +201,7 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
         close(err_fd);
     }
 
+
     if (fork() == 0) {
         execvp(argv[0], argv);
         goto error;
@@ -209,10 +211,10 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
             if (WIFEXITED(status)) {
                 //terminated in good condition
                 int exit_status = WEXITSTATUS(status);
+                printf("%d\n", exit_status);
                 char buf[256];
                 sprintf(buf, "%d", exit_status);
-                //TODO : trouver une meilleure alternative pour eviter log de 0.
-                write(ret_fd, buf, (size_t) log10(exit_status + 1) + 1) ;
+                write(ret_fd, buf, (size_t) log10(abs((exit_status == 0)?1:exit_status) + 1) + 1) ;
                 close(ret_fd);
             } else {
                 //child got a problem
@@ -254,6 +256,7 @@ void exec_task_from_id(uint64_t task_id) {
     sprintf(task_dir, "daemon_dir/%ld/", task_id);
 
     char* date_buf = time_output_from_int64(time(NULL));
+    date_buf = realloc(date_buf, sizeof(char) * 24);
     strcat(date_buf, ".txt");
 
     char err_file[1024];
@@ -284,6 +287,7 @@ void exec_task_from_id(uint64_t task_id) {
 
     char *argv[MAX_TOKENS];
     line_to_tokens(cmdLine, argv);
+
 
     close(fd_cmd);
     free(date_buf);

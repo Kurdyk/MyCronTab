@@ -40,6 +40,8 @@ int open_rep() {
         perror("open");
         exit(1);
     }
+    free(pipes_directory);
+    free(clyde_name);
     return clyde;
 }
 
@@ -80,13 +82,14 @@ int main(int argc, char **argv){
     sprintf(bonny_name, "%s/saturnd-request-pipe", pipes_directory);
     //sprintf(bonny_name, "%s/bonny.pipe", pipes_directory);
     int bonny = open(bonny_name, O_NONBLOCK | O_RDONLY);
+    free(bonny_name);
 
     pid_t child_pid = fork();
     if (child_pid == 0) { //partie execution de taches
         while(1) {
             //TODO : verif non vide deamon_dir
             sleep(1);
-            check_exec_time();
+            //check_exec_time();
             sleep(59);
         }
     } else {
@@ -96,7 +99,7 @@ int main(int argc, char **argv){
         survey.events = POLLIN;
 
         while (1) {
-            //break;
+            break;
             poll(&survey, bonny + 1, -1);
             // lecture dans le tube
             if (read(bonny, demande, sizeof(uint16_t)) > 0) {
@@ -162,6 +165,7 @@ int main(int argc, char **argv){
         test.commandline = &cmdline;
 
         //create_task(test, &next_id);
+        exec_task_from_id(1);
         //remove_task(4);
 
         sleep(2);
@@ -169,6 +173,7 @@ int main(int argc, char **argv){
     }
 
     exit_succes:
+        free(pipes_directory);
         close(bonny);
         kill(child_pid, SIGKILL);
         return EXIT_SUCCESS;

@@ -1,5 +1,5 @@
 CC      ?= gcc
-CFLAGS  ?= -Wall
+CFLAGS  ?= -Wall -g
 INCLUDES ?= -I include/
 
 all: cassini saturnd
