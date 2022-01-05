@@ -99,7 +99,7 @@ int main(int argc, char **argv){
             //break;
             poll(&survey, bonny + 1, -1);
             // lecture dans le tube
-            if (read(bonny, demande, sizeof(uint64_t)) > 0) {
+            if (read(bonny, demande, sizeof(uint16_t)) > 0) {
                 uint16_t operation = be16toh(*demande);
                 switch (operation) {
                     case CLIENT_REQUEST_CREATE_TASK:
@@ -108,6 +108,26 @@ int main(int argc, char **argv){
                     case CLIENT_REQUEST_TERMINATE:
                         terminate();
                         goto exit_succes;
+                        break;
+                    case CLIENT_REQUEST_REMOVE_TASK:
+                        ;
+                        u_int64_t *id_buf = malloc(sizeof(u_int64_t));
+                        read(bonny, id_buf, sizeof(u_int64_t));
+                        u_int64_t id = be64toh(*id_buf);
+                        int rem = remove_task(id);
+                        free(id_buf);
+                        int clyde = open_rep();
+                        if(rem) {
+                            uint16_t rep = htobe16(SERVER_REPLY_OK);
+                            write(clyde, &rep, sizeof(uint16_t));
+                        } else {
+                            uint16_t rep = htobe16(SERVER_REPLY_ERROR);
+                            uint16_t code = htobe16(SERVER_REPLY_ERROR_NOT_FOUND);
+                            write(clyde, &rep, sizeof(u_int16_t));
+                            write(clyde, &code, sizeof(u_int16_t));
+                        }
+                        close(clyde);
+                        break;
                 }
                 //printf("Message de cassini : %s\n", demande);
             }
@@ -115,7 +135,7 @@ int main(int argc, char **argv){
             //printf("On a scanné, et on a rien trouvé");
             sleep(1);
         }
-
+        free(demande);
 
         //test
         STRING arg;
@@ -142,6 +162,7 @@ int main(int argc, char **argv){
         test.commandline = &cmdline;
 
         //create_task(test, &next_id);
+        //remove_task(4);
 
         sleep(2);
         goto exit_succes;

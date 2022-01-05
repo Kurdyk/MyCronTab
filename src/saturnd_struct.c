@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/file.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -65,22 +66,9 @@ void create_task_folder(TASK task) {
     }
 }
 
-int timings_data_file() {
-    char* directory = "daemon_dir";
-    char path[64];
-    ensure_directory_exists(directory);
-    sprintf(path, "%s/timings.txt", directory);
-    int fd = open(path, O_RDWR | O_APPEND | O_CREAT, 0666);
-    if (fd < 0)
-    {
-        perror("open");
-        exit(-1);
-    }
-    return fd;
-}
 
 void notify_timing(TASK task) {
-    int fd = timings_data_file(); //open in O_RDWR
+    int fd = open("daemon_dir/timings.txt", O_WRONLY | O_APPEND | O_CREAT);
     char buf[TIMING_TEXT_MIN_BUFFERSIZE];
     sprintf(buf, "%ld ", task.taskid);
     if (write(fd, buf, strlen(buf)) < 0) {
@@ -159,6 +147,7 @@ void check_exec_time() {
     char* buf = malloc(sizeof(char) * 1024);
     FILE* file;
     file = fopen("daemon_dir/timings.txt", "r");
+    flock(fileno(file), LOCK_EX);
     ssize_t nread = 0;
     while ((nread = getline(&buf, &max_len, file)) != 0) {
         if (nread < 0) {
@@ -175,6 +164,8 @@ void check_exec_time() {
         //TODO : if the atcual timing is right do task
         exec_task_from_id(id);
     }
+    flock(fileno(file), LOCK_UN);
+    fclose(file);
     free(buf);
 }
 
@@ -297,5 +288,38 @@ void exec_task_from_id(uint64_t task_id) {
     close(fd_cmd);
     free(date_buf);
     execute(argv, ret_file, out_file, err_file, O_CREAT);
+
+}
+
+
+int remove_task(u_int64_t taskid) {
+    size_t max_len = 1024;
+    char* buf = malloc(sizeof(char) * 1024);
+    FILE* file = fopen("daemon_dir/timings.txt", "r+");
+    flock(fileno(file), LOCK_EX);
+    FILE* new = fopen("daemon_dir/timings_buff.txt", "w");
+    ssize_t nread = 0;
+    int find = 0;
+    while ((nread = getline(&buf, &max_len, file)) > 0) {
+        int i = 0;
+        while (isspace(buf[i]) == 0) {
+            i++;
+        }
+        char subtext_id[sizeof(char) * i];
+        strncpy(subtext_id,&buf[0],i);
+        uint64_t id = atol(subtext_id);
+        if (id == taskid) {
+            find = 1;
+        } else {
+            fputs(buf, new);
+        }
+    }
+    remove("daemon_dir/timings.txt");
+    rename("daemon_dir/timings_buff.txt", "daemon_dir/timings.txt");
+    flock(fileno(file), LOCK_UN);
+    fclose(file);
+    fclose(new);
+    free(buf);
+    return find;
 
 }
