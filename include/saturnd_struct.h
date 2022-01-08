@@ -34,7 +34,7 @@ void ensure_directory_exists(const char *path);
 void check_exec_time();
 void exec_task_from_id(uint64_t task_id);
 int line_to_tokens(char *line, char **tokens);
-void execute(char** argv, char* ret_file, char* out_file, char* err_file, int flags);
+void execute(char** argv, char* ret_file, char* out_file, char* err_file);
 
 /// Remove_task
 

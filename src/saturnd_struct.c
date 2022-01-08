@@ -50,7 +50,11 @@ void create_task_folder(TASK task) {
                 ;
                 u_int32_t argc = task.commandline->argc;
                 for (int i = 0; i < argc; i++) {
-                    sprintf(buf, "%s ", task.commandline->arguments[i]->content);
+                    if (i < argc - 1) {
+                        sprintf(buf, "%s ", task.commandline->arguments[i]->content);
+                    } else {
+                        sprintf(buf, "%s", task.commandline->arguments[i]->content);
+                    }
                     if (write(fd, buf, strlen(buf)) < 0) {
                         perror("write");
                         exit(1);
@@ -183,35 +187,37 @@ void check_exec_time() {
 }
 
 
-void execute(char** argv, char* ret_file, char* out_file, char* err_file, int flags) {
+void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
+
+
+    struct stat st = {0};
 
     int status;
     int ret_fd = -1;
     int out_fd = -1;
     int err_fd = -1;
 
-    if (flags == 0) {
-        flags = O_TRUNC;
-    }
+
 
     if (ret_file != NULL) {
-        ret_fd = open(ret_file, flags | O_WRONLY | O_CREAT, 0666);
-        if (ret_fd < 0) goto error;
+        ret_fd = open(ret_file, O_WRONLY | O_CREAT, 0666);
+        if (ret_fd < 0) goto open_error;
     }
+
 
     if (out_file != NULL) {
-        out_fd = open(out_file, flags | O_WRONLY | O_CREAT , 0666);
-        if (out_fd < 0) goto error;
-        if (dup2(out_fd, STDOUT_FILENO) == -1) goto error;
+        out_fd = open(out_file,  O_WRONLY | O_CREAT, 0666);
+        if (out_fd < 0) goto open_error;
+        if (dup2(out_fd, STDOUT_FILENO) == -1) goto dup_error;
     }
+    close(out_fd);
 
     if(err_file != NULL) {
-        err_fd = open(err_file, flags | O_WRONLY | O_CREAT, 0666);
-        if (err_fd < 0) goto error;
-        if (dup2(err_fd, STDERR_FILENO) == -1) goto error;
+        err_fd = open(err_file,  O_WRONLY | O_CREAT, 0666);
+        if (err_fd < 0) goto open_error;
+        if (dup2(err_fd, STDERR_FILENO) == -1) goto dup_error;
     }
 
-    close(out_fd);
     close(err_fd);
     int r = fork();
 
@@ -221,7 +227,7 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
         if (ret_fd >= 0) close(ret_fd);
         if (out_fd >= 0) close(out_fd);
         if (err_fd >= 0) close(err_fd);
-        raise(SIGKILL); // se suicide en cas d'echec... une belle métaphore de la vie
+        //raise(SIGKILL); // se suicide en cas d'echec... une belle métaphore de la vie
         return;
     } else {
         /* the parent process calls wait() on the child */
@@ -235,22 +241,37 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
                 close(ret_fd);
             } else {
                 //child got a problem
-                goto error;
+                goto other_error;
             }
         } else {
             //wait failed
-            goto error;
+            goto other_error;
         }
     }
 
     close(ret_fd);
     return;
 
-    error:
-    perror("execute");
+    other_error:
+    perror("other error in execute");
     if (ret_fd >= 0) close(ret_fd);
     if (out_fd >= 0) close(out_fd);
     if (err_fd >= 0) close(err_fd);
+    return;
+
+    open_error:
+    perror("open error in execute");
+    if (ret_fd >= 0) close(ret_fd);
+    if (out_fd >= 0) close(out_fd);
+    if (err_fd >= 0) close(err_fd);
+    return;
+
+    dup_error:
+    perror("dup error in execute");
+    if (ret_fd >= 0) close(ret_fd);
+    if (out_fd >= 0) close(out_fd);
+    if (err_fd >= 0) close(err_fd);
+    return;
 
 }
 
@@ -295,6 +316,7 @@ void exec_task_from_id(uint64_t task_id) {
     strcat(strcpy(cmdLine_file, task_dir), "args.txt");
 
     char* cmdLine = malloc(256);
+    memset(cmdLine, 0, 256);
     int fd_cmd = open(cmdLine_file, O_RDONLY);
     if (fd_cmd < 0) {
         perror("open in exec_from_id");
@@ -305,19 +327,21 @@ void exec_task_from_id(uint64_t task_id) {
         exit(1);
     }
 
-    char *argv[MAX_TOKENS];
+    char** argv = malloc(sizeof(char*) * MAX_TOKENS);
     line_to_tokens(cmdLine, argv);
+
 
 
     close(fd_cmd);
     free(date_buf);
     if (fork()==0) {
-        execute(argv, ret_file, out_file, err_file, O_CREAT);
+        execute(argv, ret_file, out_file, err_file);
         raise(SIGKILL);
     } else {
         wait(NULL);
     }
 
+    free(cmdLine);
 }
 
 /// Remove task
