@@ -17,6 +17,7 @@
 
 
 #define MAX_TOKENS 256
+#define FILE_NAME_LENGTH 24
 
 /// Create_task
 
@@ -38,5 +39,12 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
 /// Remove_task
 
 int remove_task(u_int64_t taskid);
+
+/// Get last stdout and last stderr
+
+char* last_exec_name(u_int64_t taskid);
+void send_std(char* name, uint64_t taskid);
+void send_string(STRING msg);
+
 
 #endif //SY5_PROJET_2021_2022_SATURND_STRUCT_H

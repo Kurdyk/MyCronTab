@@ -144,6 +144,10 @@ char* my_cat(char* start, char* end) {
 }
 
 void check_exec_time() {
+    struct stat st;
+    if (stat("daemon_dir", &st) < 0) {
+        return;
+    }
     size_t max_len = 1024;
     char* buf = malloc(sizeof(char) * 256);
     FILE* file;
@@ -191,16 +195,16 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
         out_fd = open(out_file, flags | O_WRONLY | O_CREAT , 0666);
         if (out_fd < 0) goto error;
         if (dup2(out_fd, STDOUT_FILENO) == -1) goto error;
-        close(out_fd);
     }
 
     if(err_file != NULL) {
         err_fd = open(err_file, flags | O_WRONLY | O_CREAT, 0666);
         if (err_fd < 0) goto error;
         if (dup2(err_fd, STDERR_FILENO) == -1) goto error;
-        close(err_fd);
     }
 
+    close(out_fd);
+    close(err_fd);
 
     if (fork() == 0) {
         execvp(argv[0], argv);
@@ -211,10 +215,9 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
             if (WIFEXITED(status)) {
                 //terminated in good condition
                 int exit_status = WEXITSTATUS(status);
-                printf("%d\n", exit_status);
                 char buf[256];
                 sprintf(buf, "%d", exit_status);
-                write(ret_fd, buf, (size_t) log10(abs((exit_status == 0)?1:exit_status) + 1) + 1) ;
+                write(ret_fd, buf, (size_t) log10(abs((exit_status == 0)?1:exit_status)) + 1) ;
                 close(ret_fd);
             } else {
                 //child got a problem
@@ -226,8 +229,12 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
         }
     }
 
+    close(ret_fd);
+    return;
+
     error:
     perror("execute");
+    printf("Error\n");
     if (ret_fd >= 0) close(ret_fd);
     if (out_fd >= 0) close(out_fd);
     if (err_fd >= 0) close(err_fd);
@@ -256,7 +263,7 @@ void exec_task_from_id(uint64_t task_id) {
     sprintf(task_dir, "daemon_dir/%ld/", task_id);
 
     char* date_buf = time_output_from_int64(time(NULL));
-    date_buf = realloc(date_buf, sizeof(char) * 24);
+    date_buf = realloc(date_buf, sizeof(char) * FILE_NAME_LENGTH);
     strcat(date_buf, ".txt");
 
     char err_file[1024];
@@ -325,5 +332,114 @@ int remove_task(u_int64_t taskid) {
     fclose(new);
     free(buf);
     return find;
+
+}
+
+
+
+char* last_exec_name(u_int64_t taskid) {
+    char* prev = malloc(sizeof(char)*FILE_NAME_LENGTH);
+
+    char task_dir[1024];
+    sprintf(task_dir, "daemon_dir/%ld/standard_out", taskid);
+
+    DIR *dir = opendir(task_dir);
+    struct dirent *entry;
+    while ((entry = readdir(dir))) {
+        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..")  != 0 && strcmp(prev, entry->d_name) < 0) {
+            strcpy(prev, entry->d_name);
+        }
+    }
+    return prev;
+}
+
+
+/// Get strout ou strerr
+
+
+void send_string(STRING msg) {
+    int clyde = open_rep();
+    uint32_t size = htobe32(msg.length);
+    if (write(clyde, &size, sizeof(uint32_t)) < 0) goto error;
+    if (write(clyde, msg.content, msg.length) < 0) goto error;
+    close(clyde);
+
+    return;
+
+    error:
+    perror("write in send_string");
+    close(clyde);
+    exit(1);
+}
+
+
+ void send_std(char* name, uint64_t taskid) {
+    struct stat st;
+
+    int clyde;
+    uint16_t rep;
+    uint16_t error_type;
+
+    char file_path[256];
+
+    sprintf(file_path, "daemon_dir/%ld", taskid);
+    if (stat(file_path, &st) < 0) {
+        /* Task not found */
+        clyde = open_rep();
+        rep = htobe16(SERVER_REPLY_ERROR);
+        if (write(clyde, &rep, sizeof(rep)) < 0) {
+            perror("write in send_std");
+            exit(1);
+        }
+        error_type = htobe16(SERVER_REPLY_ERROR_NOT_FOUND);
+        if (write(clyde, &error_type, sizeof(error_type)) < 0) {
+            perror("write in send_std");
+            exit(1);
+        }
+        close(clyde);
+        return;
+    }
+
+
+    char* last_exec = last_exec_name(taskid);
+    if (strlen(last_exec) == 0) {
+        /* Task never run */
+        clyde = open_rep();
+        rep = htobe16(SERVER_REPLY_ERROR);
+        if (write(clyde, &rep, sizeof(rep)) < 0) {
+            perror("write in send_std");
+            exit(1);
+        }
+        error_type = htobe16(SERVER_REPLY_ERROR_NEVER_RUN);
+        if (write(clyde, &error_type, sizeof(error_type)) < 0) {
+            perror("write in send_std");
+            exit(1);
+        }
+        close(clyde);
+        return;
+    }
+
+    sprintf(file_path, "daemon_dir/%ld/%s/%s", taskid, name, last_exec);
+    free(last_exec);
+
+
+    int fd = open(file_path, O_RDONLY);
+    if (fd < 0) {
+        perror("open in send_std");
+        exit(1);
+    }
+    char* content = malloc(sizeof(char) * UINT32_MAX);
+    int n_read = read(fd, content, sizeof(content));
+    if (n_read < 0) {
+        perror("read in send_std");
+        exit(1);
+    }
+    STRING string = {.length = n_read, .content = content};
+    clyde = open_rep();
+    rep = htobe16(SERVER_REPLY_OK);
+    write(clyde, &rep, sizeof(rep));
+    send_string(string);
+    free(content);
+    close(fd);
 
 }

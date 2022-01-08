@@ -82,12 +82,12 @@ int main(int argc, char **argv){
     sprintf(bonny_name, "%s/saturnd-request-pipe", pipes_directory);
     //sprintf(bonny_name, "%s/bonny.pipe", pipes_directory);
     int bonny = open(bonny_name, O_NONBLOCK | O_RDONLY);
+    int clyde;
     free(bonny_name);
 
     pid_t child_pid = fork();
     if (child_pid == 0) { //partie execution de taches
         while(1) {
-            //TODO : verif non vide deamon_dir
             sleep(1);
             //check_exec_time();
             sleep(59);
@@ -98,8 +98,12 @@ int main(int argc, char **argv){
         survey.fd = bonny;
         survey.events = POLLIN;
 
+
+        u_int64_t *id_buf;
+        u_int64_t id;
+
         while (1) {
-            break;
+            //break;
             poll(&survey, bonny + 1, -1);
             // lecture dans le tube
             if (read(bonny, demande, sizeof(uint16_t)) > 0) {
@@ -113,13 +117,12 @@ int main(int argc, char **argv){
                         goto exit_succes;
                         break;
                     case CLIENT_REQUEST_REMOVE_TASK:
-                        ;
-                        u_int64_t *id_buf = malloc(sizeof(u_int64_t));
+                        id_buf = malloc(sizeof(u_int64_t));
                         read(bonny, id_buf, sizeof(u_int64_t));
-                        u_int64_t id = be64toh(*id_buf);
+                        id = be64toh(*id_buf);
                         int rem = remove_task(id);
                         free(id_buf);
-                        int clyde = open_rep();
+                        clyde = open_rep();
                         if(rem) {
                             uint16_t rep = htobe16(SERVER_REPLY_OK);
                             write(clyde, &rep, sizeof(uint16_t));
@@ -131,6 +134,22 @@ int main(int argc, char **argv){
                         }
                         close(clyde);
                         break;
+                    case CLIENT_REQUEST_GET_STDERR:
+                    case CLIENT_REQUEST_GET_STDOUT:
+                        ;
+                        char name[16];
+                        if(operation == CLIENT_REQUEST_GET_STDOUT) {
+                            sprintf(name, "standard_out");
+                        } else {
+                            sprintf(name, "error_out");
+                        }
+                        id_buf = malloc(sizeof(u_int64_t));
+                        read(bonny, id_buf, sizeof(u_int64_t));
+                        id = be64toh(*id_buf);
+                        free(id_buf);
+                        send_std(name, id);
+                        break;
+
                 }
                 //printf("Message de cassini : %s\n", demande);
             }
@@ -164,11 +183,14 @@ int main(int argc, char **argv){
         test.timing = t;
         test.commandline = &cmdline;
 
-        //create_task(test, &next_id);
-        exec_task_from_id(1);
-        //remove_task(4);
 
-        sleep(2);
+        //create_task(test, &next_id);
+        //exec_task_from_id(1);
+        //remove_task(4);
+        //send_std("error_out", 3);
+
+
+        sleep(1);
         goto exit_succes;
     }
 

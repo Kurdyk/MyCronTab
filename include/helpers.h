@@ -2,8 +2,9 @@
 #define HELPERS_H_
 
 #include <unistd.h>
-#include "timing-text-io.h"
 
+#include "timing-text-io.h"
+#include "saturnd.h"
 
 
 /////////////////////////////////////////////////////////////////////////////////////
