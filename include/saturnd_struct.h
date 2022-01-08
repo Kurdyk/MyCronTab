@@ -25,7 +25,7 @@ void create_task_folder(TASK task);
 void notify_timing(TASK task);
 void create_task(TASK task, u_int64_t* taskid);
 void set_taskid(TASK* task, uint64_t* next_id);
-void set_next_id(uint64_t* next_id);
+void set_next_id(uint64_t* next_id, char* path);
 char* my_cat(char* start, char* end);
 
 /// Execution
@@ -42,7 +42,7 @@ int remove_task(u_int64_t taskid);
 
 /// Get last stdout and last stderr
 
-char* last_exec_name(u_int64_t taskid);
+char* last_exec_name(u_int64_t taskid, int is_delete);
 void send_std(char* name, uint64_t taskid);
 void send_string(STRING msg);
 

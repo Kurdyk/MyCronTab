@@ -68,7 +68,9 @@ int main(int argc, char **argv){
 
     ensure_directory_exists("daemon_dir");
     u_int64_t next_id = 1;
-    set_next_id(&next_id);
+    set_next_id(&next_id, "daemon_dir");
+    set_next_id(&next_id, "daemon_dir/trash_bin");
+
 
     char * username = malloc(sizeof(char) * 50);
     getlogin_r(username, 50);
@@ -103,7 +105,7 @@ int main(int argc, char **argv){
         u_int64_t id;
 
         while (1) {
-            //break;
+            break;
             poll(&survey, bonny + 1, -1);
             // lecture dans le tube
             if (read(bonny, demande, sizeof(uint16_t)) > 0) {
@@ -187,7 +189,7 @@ int main(int argc, char **argv){
         //create_task(test, &next_id);
         //exec_task_from_id(1);
         //remove_task(4);
-        //send_std("error_out", 3);
+        send_std("error_out", 1);
 
 
         sleep(1);

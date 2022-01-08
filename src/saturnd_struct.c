@@ -20,6 +20,9 @@
 #include "../include/saturnd.h"
 
 
+/// Create task
+
+
 void create_task_folder(TASK task) {
     char* directory = "daemon_dir";
     char path[128];
@@ -113,9 +116,8 @@ int is_number(char* input) {
     return 1;
 }
 
-void set_next_id(uint64_t* next_id) {
-    //On conserve comme ça les valeurs de retour en cas de volonté de consultation ultérieure.
-    DIR *dirp = opendir("daemon_dir");
+void set_next_id(uint64_t* next_id, char* path) {
+    DIR *dirp = opendir(path);
     struct dirent *entry;
     while ((entry = readdir(dirp))) {
         if(is_number(entry->d_name)) {
@@ -126,6 +128,8 @@ void set_next_id(uint64_t* next_id) {
     closedir(dirp);
 }
 
+
+/// Structure helpers
 
 void ensure_directory_exists(const char *path){
     struct stat st = {0};
@@ -142,6 +146,9 @@ char* my_cat(char* start, char* end) {
     strcat(res, end);
     return res;
 }
+
+
+/// Execution
 
 void check_exec_time() {
     struct stat st;
@@ -302,8 +309,18 @@ void exec_task_from_id(uint64_t task_id) {
 
 }
 
+/// Remove task
+
 
 int remove_task(u_int64_t taskid) {
+
+    //On conserve comme ça les valeurs de retour en cas de volonté de consultation ultérieure.
+    char path[64];
+    sprintf(path, "daemon_dir/%ld", taskid);
+    char new_path[64];
+    sprintf(new_path, "daemon_dir/trash_bin/%ld", taskid);
+    rename(path, new_path);
+
     size_t max_len = 1024;
     char* buf = malloc(sizeof(char) * 1024);
     FILE* file = fopen("daemon_dir/timings.txt", "r+");
@@ -327,6 +344,7 @@ int remove_task(u_int64_t taskid) {
     }
     remove("daemon_dir/timings.txt");
     rename("daemon_dir/timings_buff.txt", "daemon_dir/timings.txt");
+    chmod("daemon_dir/timings.txt", 0666);
     flock(fileno(file), LOCK_UN);
     fclose(file);
     fclose(new);
@@ -337,11 +355,22 @@ int remove_task(u_int64_t taskid) {
 
 
 
-char* last_exec_name(u_int64_t taskid) {
+
+
+/// Get strout ou strerr
+
+
+
+char* last_exec_name(u_int64_t taskid, int is_deleted) {
+
     char* prev = malloc(sizeof(char)*FILE_NAME_LENGTH);
 
     char task_dir[1024];
-    sprintf(task_dir, "daemon_dir/%ld/standard_out", taskid);
+    if (is_deleted == 0) {
+        sprintf(task_dir, "daemon_dir/%ld/standard_out", taskid);
+    } else {
+        sprintf(task_dir, "daemon_dir/trash_bin/%ld/standard_out", taskid);
+    }
 
     DIR *dir = opendir(task_dir);
     struct dirent *entry;
@@ -352,9 +381,6 @@ char* last_exec_name(u_int64_t taskid) {
     }
     return prev;
 }
-
-
-/// Get strout ou strerr
 
 
 void send_string(STRING msg) {
@@ -374,34 +400,41 @@ void send_string(STRING msg) {
 
 
  void send_std(char* name, uint64_t taskid) {
-    struct stat st;
+     struct stat st;
 
-    int clyde;
-    uint16_t rep;
-    uint16_t error_type;
+     int clyde;
+     uint16_t rep;
+     uint16_t error_type;
+     int is_deleted = 0;
 
-    char file_path[256];
+     char file_path[256];
 
-    sprintf(file_path, "daemon_dir/%ld", taskid);
-    if (stat(file_path, &st) < 0) {
-        /* Task not found */
-        clyde = open_rep();
-        rep = htobe16(SERVER_REPLY_ERROR);
-        if (write(clyde, &rep, sizeof(rep)) < 0) {
-            perror("write in send_std");
-            exit(1);
-        }
-        error_type = htobe16(SERVER_REPLY_ERROR_NOT_FOUND);
-        if (write(clyde, &error_type, sizeof(error_type)) < 0) {
-            perror("write in send_std");
-            exit(1);
-        }
-        close(clyde);
-        return;
-    }
+     sprintf(file_path, "daemon_dir/%ld", taskid);
+     if (stat(file_path, &st) < 0) {
+         /* Task may have been deleted */
+         sprintf(file_path, "daemon_dir/trash_bin/%ld", taskid);
+         if (stat(file_path, &st) < 0) {
+             /* Task not found */
+             clyde = open_rep();
+             rep = htobe16(SERVER_REPLY_ERROR);
+             if (write(clyde, &rep, sizeof(rep)) < 0) {
+                 perror("write in send_std");
+                 exit(1);
+             }
+             error_type = htobe16(SERVER_REPLY_ERROR_NOT_FOUND);
+             if (write(clyde, &error_type, sizeof(error_type)) < 0) {
+                 perror("write in send_std");
+                 exit(1);
+             }
+             close(clyde);
+             return;
+         } else {
+             is_deleted = 1;
+         }
+     }
 
 
-    char* last_exec = last_exec_name(taskid);
+    char* last_exec = last_exec_name(taskid, is_deleted);
     if (strlen(last_exec) == 0) {
         /* Task never run */
         clyde = open_rep();
@@ -419,9 +452,12 @@ void send_string(STRING msg) {
         return;
     }
 
-    sprintf(file_path, "daemon_dir/%ld/%s/%s", taskid, name, last_exec);
+    if (!is_deleted) {
+        sprintf(file_path, "daemon_dir/%ld/%s/%s", taskid, name, last_exec);
+    } else {
+        sprintf(file_path, "daemon_dir/trash_bin/%ld/%s/%s", taskid, name, last_exec);
+    }
     free(last_exec);
-
 
     int fd = open(file_path, O_RDONLY);
     if (fd < 0) {
