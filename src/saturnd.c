@@ -69,6 +69,7 @@ void open_pipes(char *path){
 int main(int argc, char **argv){
 
     ensure_directory_exists("daemon_dir");
+    ensure_directory_exists("daemon_dir/trash_bin");
     u_int64_t next_id = 1;
     set_next_id(&next_id, "daemon_dir");
     set_next_id(&next_id, "daemon_dir/trash_bin");
@@ -92,9 +93,9 @@ int main(int argc, char **argv){
     pid_t child_pid = fork();
     if (child_pid == 0) { //partie execution de taches
         while(1) {
-            sleep(1);
-            //check_exec_time();
-            sleep(59);
+            sleep(3);
+            check_exec_time();
+            //sleep(59);
         }
     } else {
         uint16_t *demande = malloc(sizeof(u_int16_t));

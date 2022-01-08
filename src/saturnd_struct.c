@@ -50,8 +50,7 @@ void create_task_folder(TASK task) {
                 ;
                 u_int32_t argc = task.commandline->argc;
                 for (int i = 0; i < argc; i++) {
-                    u_int32_t length = task.commandline->arguments[i]->length;
-                    snprintf(buf, length + 1, "%s ", task.commandline->arguments[i]->content);
+                    sprintf(buf, "%s ", task.commandline->arguments[i]->content);
                     if (write(fd, buf, strlen(buf)) < 0) {
                         perror("write");
                         exit(1);
@@ -73,7 +72,7 @@ void create_task_folder(TASK task) {
 
 
 void notify_timing(TASK task) {
-    int fd = open("daemon_dir/timings.txt", O_WRONLY | O_APPEND | O_CREAT);
+    int fd = open("daemon_dir/timings.txt", O_WRONLY | O_APPEND | O_CREAT, 0666);
     char buf[TIMING_TEXT_MIN_BUFFERSIZE];
     sprintf(buf, "%ld ", task.taskid);
     if (write(fd, buf, strlen(buf)) < 0) {
