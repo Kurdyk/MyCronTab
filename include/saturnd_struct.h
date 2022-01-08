@@ -46,5 +46,8 @@ char* last_exec_name(u_int64_t taskid, int is_delete);
 void send_std(char* name, uint64_t taskid);
 void send_string(STRING msg);
 
+/// Get time and exit code
+
+void send_time_and_exitcode(u_int64_t taskid);
 
 #endif //SY5_PROJET_2021_2022_SATURND_STRUCT_H

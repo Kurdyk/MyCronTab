@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <fcntl.h>
 #include <time.h>
 #if __APPLE__
@@ -6,9 +8,12 @@
 #include <endian.h>
 #endif
 
+#include <time.h>
+#include <string.h>
+
+
 #include "helpers.h"
 #include "server-reply.h"
-#include "saturnd.h"
 
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -194,3 +199,11 @@ TASK* read_task(int request_pipe) {
 }
 
 
+
+u_int64_t int64_output_from_timestamp(char* timestamp) {
+    struct tm tm = {0};
+    memset(&tm, 0, sizeof(struct tm));
+    strptime(timestamp, "%Y-%m-%d %H:%M:%S", &tm);
+    u_int64_t sec = mktime(&tm);
+    return sec;
+}

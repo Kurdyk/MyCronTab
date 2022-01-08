@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -105,7 +107,7 @@ int main(int argc, char **argv){
         u_int64_t id;
 
         while (1) {
-            break;
+            //break;
             poll(&survey, bonny + 1, -1);
             // lecture dans le tube
             if (read(bonny, demande, sizeof(uint16_t)) > 0) {
@@ -136,8 +138,7 @@ int main(int argc, char **argv){
                         }
                         close(clyde);
                         break;
-                    case CLIENT_REQUEST_GET_STDERR:
-                    case CLIENT_REQUEST_GET_STDOUT:
+                    case CLIENT_REQUEST_GET_STDERR: case CLIENT_REQUEST_GET_STDOUT:
                         ;
                         char name[16];
                         if(operation == CLIENT_REQUEST_GET_STDOUT) {
@@ -150,6 +151,13 @@ int main(int argc, char **argv){
                         id = be64toh(*id_buf);
                         free(id_buf);
                         send_std(name, id);
+                        break;
+                    case CLIENT_REQUEST_GET_TIMES_AND_EXITCODES:
+                        id_buf = malloc(sizeof(u_int64_t));
+                        read(bonny, id_buf, sizeof(u_int64_t));
+                        id = be64toh(*id_buf);
+                        free(id_buf);
+                        send_time_and_exitcode(id);
                         break;
 
                 }
@@ -189,8 +197,8 @@ int main(int argc, char **argv){
         //create_task(test, &next_id);
         //exec_task_from_id(1);
         //remove_task(4);
-        send_std("error_out", 1);
-
+        //send_std("error_out", 1);
+        //send_time_and_exitcode(1);
 
         sleep(1);
         goto exit_succes;
