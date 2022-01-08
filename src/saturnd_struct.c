@@ -165,7 +165,7 @@ void check_exec_time() {
     while ((nread = getline(&buf, &max_len, file)) > 0) {
         if (nread < 0) {
             perror("read");
-            exit(1);
+            _exit(1);
         }
         int i = 0;
         while (isspace(buf[i]) == 0) {
@@ -213,13 +213,19 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
 
     close(out_fd);
     close(err_fd);
+    int r = fork();
 
-    if (fork() == 0) {
+    if (r == 0) {
         execvp(argv[0], argv);
-        goto error;
+        //execvp failed
+        if (ret_fd >= 0) close(ret_fd);
+        if (out_fd >= 0) close(out_fd);
+        if (err_fd >= 0) close(err_fd);
+        raise(SIGKILL); // se suicide en cas d'echec... une belle métaphore de la vie
+        return;
     } else {
         /* the parent process calls wait() on the child */
-        if (wait(&status) > 0) {
+        if (waitpid(r, &status, 0) > 0) {
             if (WIFEXITED(status)) {
                 //terminated in good condition
                 int exit_status = WEXITSTATUS(status);
@@ -242,7 +248,6 @@ void execute(char** argv, char* ret_file, char* out_file, char* err_file, int fl
 
     error:
     perror("execute");
-    printf("Error\n");
     if (ret_fd >= 0) close(ret_fd);
     if (out_fd >= 0) close(out_fd);
     if (err_fd >= 0) close(err_fd);
@@ -267,36 +272,36 @@ int line_to_tokens(char *line, char **tokens) {
 }
 
 void exec_task_from_id(uint64_t task_id) {
-    char task_dir[1024];
+    char task_dir[256];
     sprintf(task_dir, "daemon_dir/%ld/", task_id);
 
     char* date_buf = time_output_from_int64(time(NULL));
     date_buf = realloc(date_buf, sizeof(char) * FILE_NAME_LENGTH);
     strcat(date_buf, ".txt");
 
-    char err_file[1024];
+    char err_file[256];
     strcat(strcpy(err_file, task_dir), "error_out/");
     strcat(err_file, date_buf);
 
-    char ret_file[1024];
+    char ret_file[256];
     strcat(strcpy(ret_file, task_dir), "return_values/");
     strcat(ret_file, date_buf);
 
-    char out_file[1024];
+    char out_file[256];
     strcat(strcpy(out_file, task_dir), "standard_out/");
     strcat(out_file, date_buf);
 
-    char cmdLine_file[1024];
+    char cmdLine_file[256];
     strcat(strcpy(cmdLine_file, task_dir), "args.txt");
 
-    char cmdLine[1024];
+    char* cmdLine = malloc(256);
     int fd_cmd = open(cmdLine_file, O_RDONLY);
     if (fd_cmd < 0) {
-        perror("open");
+        perror("open in exec_from_id");
         exit(1);
     }
-    if (read(fd_cmd, cmdLine, 1024) < 0) {
-        perror("read");
+    if (read(fd_cmd, cmdLine, 256) < 0) {
+        perror("read in exec_from_id");
         exit(1);
     }
 
@@ -306,7 +311,12 @@ void exec_task_from_id(uint64_t task_id) {
 
     close(fd_cmd);
     free(date_buf);
-    execute(argv, ret_file, out_file, err_file, O_CREAT);
+    if (fork()==0) {
+        execute(argv, ret_file, out_file, err_file, O_CREAT);
+        raise(SIGKILL);
+    } else {
+        wait(NULL);
+    }
 
 }
 

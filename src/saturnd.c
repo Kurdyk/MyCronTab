@@ -22,7 +22,6 @@
 
 
 void terminate() {
-    //printf("Terminate\n");
     uint16_t rep = htobe16(SERVER_REPLY_OK);
     int clyde = open_rep();
     write(clyde, &rep, sizeof(uint16_t));
