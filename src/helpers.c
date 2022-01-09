@@ -207,3 +207,11 @@ u_int64_t int64_output_from_timestamp(char* timestamp) {
     u_int64_t sec = mktime(&tm);
     return sec;
 }
+
+void free_task(TASK* task) {
+    for(int i = 0; i < task->commandline->argc; i++) {
+        free(task->commandline->arguments[i]);
+    }
+    free(task->commandline);
+    free(task);
+}

@@ -97,6 +97,7 @@ void read_timing(int request_pipe, TIMING *timing);
 COMMANDLINE* read_commandline(int request_pipe);
 TASK* read_task(int request_pipe);
 u_int64_t int64_output_from_timestamp(char* timestamp);
+void free_task(TASK* task);
 
 
 #endif
