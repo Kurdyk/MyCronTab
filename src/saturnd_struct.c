@@ -334,12 +334,7 @@ void exec_task_from_id(uint64_t task_id) {
 
     close(fd_cmd);
     free(date_buf);
-    if (fork()==0) {
-        execute(argv, ret_file, out_file, err_file);
-        raise(SIGKILL);
-    } else {
-        wait(NULL);
-    }
+    execute(argv, ret_file, out_file, err_file);
 
     free(cmdLine);
 }

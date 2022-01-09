@@ -117,7 +117,7 @@ int main(int argc, char **argv){
                         ;
                         TASK* task = read_task(bonny);
                         create_task(*task, &next_id);
-                        //free(task->commandline);
+                        free(task->commandline);
                         free(task);
                         break;
                     case CLIENT_REQUEST_TERMINATE:
