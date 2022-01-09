@@ -43,6 +43,7 @@ void create_task_folder(TASK task) {
         } else {
             ensure_directory_exists(file_name);
         }
+        free(file_name);
         char buf[TIMING_TEXT_MIN_BUFFERSIZE];
 
         switch(i) {
@@ -70,7 +71,6 @@ void create_task_folder(TASK task) {
             default: //others
                 break;
         }
-        free(file_name);
     }
 }
 
@@ -157,7 +157,7 @@ char* my_cat(char* start, char* end) {
 
 void check_exec_time() {
     struct stat st;
-    if (stat("daemon_dir", &st) < 0) {
+    if (stat("daemon_dir/timings.txt", &st) < 0) {
         return;
     }
     size_t max_len = 1024;

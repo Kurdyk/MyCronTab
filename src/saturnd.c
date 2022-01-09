@@ -114,7 +114,11 @@ int main(int argc, char **argv){
                 uint16_t operation = be16toh(*demande);
                 switch (operation) {
                     case CLIENT_REQUEST_CREATE_TASK:
-                        create_task(*read_task(bonny), &next_id);
+                        ;
+                        TASK* task = read_task(bonny);
+                        create_task(*task, &next_id);
+                        //free(task->commandline);
+                        free(task);
                         break;
                     case CLIENT_REQUEST_TERMINATE:
                         terminate();
