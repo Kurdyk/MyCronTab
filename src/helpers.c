@@ -148,7 +148,7 @@ void get_timing(PIPES *pipes, TIMING *timing)
 
 char* time_output_from_int64(int64_t sec) {
     char* buff = malloc(sizeof(char)*20);
-    strftime(buff, 20, "%Y-%m-%d_%H:%M:%S", localtime(&sec));
+    strftime(buff, 20, "%Y-%m-%d %H:%M:%S", localtime(&sec));
     return buff;
 }
 
@@ -203,7 +203,7 @@ TASK* read_task(int request_pipe) {
 u_int64_t int64_output_from_timestamp(char* timestamp) {
     struct tm tm = {0};
     memset(&tm, 0, sizeof(struct tm));
-    strptime(timestamp, "%Y-%m-%d_%H:%M:%S", &tm);
+    strptime(timestamp, "%Y-%m-%d %H:%M:%S", &tm);
     u_int64_t sec = mktime(&tm);
     return sec;
 }
