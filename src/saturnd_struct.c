@@ -27,10 +27,10 @@
 
 void create_task_folder(TASK task) {
     char* directory = "daemon_dir";
-    char path[128];
-    char* files[] = {"/args.txt", "/task_timing.txt", "/return_values", "/standard_out", "/error_out"};
+    char* path = malloc(128);
+    char* files[] = {"/args.txt", "/task_timing.txt", "/return_values/", "/standard_out/", "/error_out/"};
+    memset(path, 0, 128);
     sprintf(path, "%s/%ld", directory, task.taskid);
-    ensure_directory_exists(directory);
     ensure_directory_exists(path);
     for (int i = 0; i < 5; i++) {
         char* file_name = my_cat(path, files[i]);
@@ -190,20 +190,15 @@ void check_exec_time() {
 void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
 
 
-    struct stat st = {0};
-
     int status;
     int ret_fd = -1;
     int out_fd = -1;
     int err_fd = -1;
 
-
-
     if (ret_file != NULL) {
         ret_fd = open(ret_file, O_WRONLY | O_CREAT, 0666);
         if (ret_fd < 0) goto open_error;
     }
-
 
     if (out_file != NULL) {
         out_fd = open(out_file,  O_WRONLY | O_CREAT, 0666);
@@ -227,7 +222,6 @@ void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
         if (ret_fd >= 0) close(ret_fd);
         if (out_fd >= 0) close(out_fd);
         if (err_fd >= 0) close(err_fd);
-        //raise(SIGKILL); // se suicide en cas d'echec... une belle métaphore de la vie
         return;
     } else {
         /* the parent process calls wait() on the child */
@@ -335,8 +329,11 @@ void exec_task_from_id(uint64_t task_id) {
     close(fd_cmd);
     free(date_buf);
     execute(argv, ret_file, out_file, err_file);
-
+    free(argv);
     free(cmdLine);
+
+
+
 }
 
 /// Remove task
