@@ -127,15 +127,15 @@ int is_number(char* input) {
 }
 
 void set_next_id(uint64_t* next_id, char* path) {
-    DIR *dirp = opendir(path);
+    DIR *dir = opendir(path);
     struct dirent *entry;
-    while ((entry = readdir(dirp))) {
+    while ((entry = readdir(dir))) {
         if(is_number(entry->d_name)) {
             uint64_t max = (atol(entry->d_name) < *next_id) ? *next_id : atol(entry->d_name) + 1;
             *next_id = max;
         }
     }
-    closedir(dirp);
+    closedir(dir);
 }
 
 
@@ -179,8 +179,8 @@ void check_exec_time() {
         while (isspace(buf[i]) == 0) {
             i++;
         }
-        char* subtext_id = malloc(sizeof(char) * i);
-        memset(subtext_id, 0, sizeof(char) * i);
+        char* subtext_id = malloc(sizeof(char) * i + 1);
+        memset(subtext_id, 0, sizeof(char) * i + 1);
         strncpy(subtext_id,&buf[0],i);
         uint64_t id = atol(subtext_id);
         free(subtext_id);
@@ -227,6 +227,7 @@ void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
         if (err_fd >= 0) close(err_fd);
         raise(SIGKILL);
         return;
+
     } else {
 
         if (ret_file != NULL) {
@@ -360,10 +361,7 @@ void exec_task_from_id(uint64_t task_id) {
     } else {
         wait(NULL);
     }
-    /*
-    for(int i = 0; argv[i] != NULL; i++) {
-        free(argv[i]);
-    }*/
+
     free(argv);
     free(cmdLine);
 

@@ -194,6 +194,7 @@ COMMANDLINE* read_commandline(int request_pipe)
 
 TASK* read_task(int request_pipe) {
     TASK* res = malloc(sizeof(TASK));
+    memset(res, 0, sizeof(TASK));
     read_timing(request_pipe, &(res->timing));
     res->commandline = read_commandline(request_pipe);
     return res;
