@@ -21,12 +21,7 @@
 #define PIPES_MODE 0777
 
 
-void terminate() {
-    uint16_t rep = htobe16(SERVER_REPLY_OK);
-    int clyde = open_rep();
-    write(clyde, &rep, sizeof(uint16_t));
-    close(clyde);
-}
+
 
 int open_rep() {
     char * pipes_directory = malloc(sizeof(char) * 100);
@@ -88,13 +83,14 @@ int main(int argc, char **argv){
     int bonny = open(bonny_name, O_NONBLOCK | O_RDONLY);
     int clyde;
     free(bonny_name);
+    free(pipes_directory);
 
     pid_t child_pid = fork();
     if (child_pid == 0) { //partie execution de taches
         while(1) {
-            sleep(20);
+            sleep(2);
             check_exec_time();
-            //sleep(59);
+            sleep(8);
         }
     } else {
         uint16_t *demande = malloc(sizeof(u_int16_t));
@@ -121,6 +117,7 @@ int main(int argc, char **argv){
                         break;
                     case CLIENT_REQUEST_TERMINATE:
                         terminate();
+                        free(demande);
                         goto exit_succes;
                         break;
                     case CLIENT_REQUEST_REMOVE_TASK:
@@ -144,6 +141,7 @@ int main(int argc, char **argv){
                     case CLIENT_REQUEST_GET_STDERR: case CLIENT_REQUEST_GET_STDOUT:
                         ;
                         char name[16];
+                        memset(name, 0, 16);
                         if(operation == CLIENT_REQUEST_GET_STDOUT) {
                             sprintf(name, "standard_out");
                         } else {
@@ -208,7 +206,6 @@ int main(int argc, char **argv){
     }
 
     exit_succes:
-        free(pipes_directory);
         close(bonny);
         kill(child_pid, SIGKILL);
         return EXIT_SUCCESS;

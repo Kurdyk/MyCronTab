@@ -4,6 +4,5 @@
 
 int open_rep();
 void open_pipes(char *path);
-void terminate();
 
 #endif //SY5_PROJET_2021_2022_SATURND_H

@@ -50,4 +50,9 @@ void send_string(STRING msg);
 
 void send_time_and_exitcode(u_int64_t taskid);
 
+
+/// Terminate
+
+void terminate();
+
 #endif //SY5_PROJET_2021_2022_SATURND_STRUCT_H

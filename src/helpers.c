@@ -160,6 +160,7 @@ STRING* read_string(int request_pipe)
     read(request_pipe, &(string->length), sizeof(string->length));
     string->length = be32toh(string->length);
     string->content = malloc((string->length + 1) * sizeof(char));
+    memset(string->content, 0, (string->length + 1) * sizeof(char));
     for (int i = 0; i < string->length; i++)
     {
         read(request_pipe, (string->content + i), 1);

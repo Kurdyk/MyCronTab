@@ -151,7 +151,7 @@ void ensure_directory_exists(const char *path){
 
 
 char* my_cat(char* start, char* end) {
-    size_t size = sizeof(char) * (strlen(start) + strlen(end) - 1);
+    size_t size = sizeof(char) * (strlen(start) + strlen(end) + 10);
     char* res = malloc(size);
     memset(res, 0, size);
     strcat(res, start);
@@ -164,7 +164,7 @@ char* my_cat(char* start, char* end) {
 /// Execution
 
 void check_exec_time() {
-    struct stat st;
+    struct stat st = {0};
     if (stat("daemon_dir/timings.txt", &st) < 0) {
         return;
     }
@@ -174,19 +174,16 @@ void check_exec_time() {
     FILE* file;
     file = fopen("daemon_dir/timings.txt", "r");
     flock(fileno(file), LOCK_EX);
-    ssize_t nread = 0;
-    while ((nread = getline(&buf, &max_len, file)) > 0) {
-        if (nread < 0) {
-            perror("read");
-            _exit(1);
-        }
+    while (getline(&buf, &max_len, file) > 0) {
         int i = 0;
         while (isspace(buf[i]) == 0) {
             i++;
         }
-        char subtext_id[sizeof(char) * i];
+        char* subtext_id = malloc(sizeof(char) * i);
+        memset(subtext_id, 0, sizeof(char) * i);
         strncpy(subtext_id,&buf[0],i);
         uint64_t id = atol(subtext_id);
+        free(subtext_id);
         //TODO : if the atcual timing is right do task
         exec_task_from_id(id);
     }
@@ -270,7 +267,7 @@ void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
     return;
 
     child_error:
-    perror("child error in execute");
+    //perror("child error in execute");
     if (ret_fd >= 0) close(ret_fd);
     if (out_fd >= 0) close(out_fd);
     if (err_fd >= 0) close(err_fd);
@@ -350,13 +347,12 @@ void exec_task_from_id(uint64_t task_id) {
         perror("read in exec_from_id");
         exit(1);
     }
+    close(fd_cmd);
+
 
     char** argv = malloc(sizeof(char*) * MAX_TOKENS);
     line_to_tokens(cmdLine, argv);
 
-
-
-    close(fd_cmd);
     free(date_buf);
 
     if (fork() == 0 ) {
@@ -364,6 +360,10 @@ void exec_task_from_id(uint64_t task_id) {
     } else {
         wait(NULL);
     }
+    /*
+    for(int i = 0; argv[i] != NULL; i++) {
+        free(argv[i]);
+    }*/
     free(argv);
     free(cmdLine);
 
@@ -631,4 +631,14 @@ void send_time_and_exitcode(u_int64_t taskid) {
         perror("write in send_time_and_exitcode");
         close(clyde);
         exit(1);
+}
+
+
+/// Terminate
+
+void terminate() {
+    uint16_t rep = htobe16(SERVER_REPLY_OK);
+    int clyde = open_rep();
+    write(clyde, &rep, sizeof(uint16_t));
+    close(clyde);
 }
