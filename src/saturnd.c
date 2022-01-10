@@ -92,23 +92,23 @@ int main(int argc, char **argv){
     pid_t child_pid = fork();
     if (child_pid == 0) { //partie execution de taches
         while(1) {
-            sleep(3);
+            sleep(20);
             check_exec_time();
             //sleep(59);
         }
     } else {
         uint16_t *demande = malloc(sizeof(u_int16_t));
-        struct pollfd survey;
-        survey.fd = bonny;
-        survey.events = POLLIN;
+        struct pollfd survey[1];
 
+        survey[0].fd = bonny;
+        survey[0].events = POLLIN;
 
         u_int64_t *id_buf;
         u_int64_t id;
 
         while (1) {
             //break;
-            poll(&survey, bonny + 1, -1);
+            poll(survey, 1, -1);
             // lecture dans le tube
             if (read(bonny, demande, sizeof(uint16_t)) > 0) {
                 uint16_t operation = be16toh(*demande);

@@ -36,7 +36,7 @@ void create_task_folder(TASK task) {
         char* file_name = my_cat(path, files[i]);
         int fd;
         if (i < 2) {
-            if ((fd = open(file_name, O_RDWR | O_TRUNC | O_CREAT, 0666)) == -1) {
+            if ((fd = open(file_name, O_WRONLY | O_CREAT, 0666)) == -1) {
                 perror("open");
                 exit(1);
             }
@@ -45,6 +45,7 @@ void create_task_folder(TASK task) {
         }
         free(file_name);
         char buf[TIMING_TEXT_MIN_BUFFERSIZE];
+        memset(buf, 0, TIMING_TEXT_MIN_BUFFERSIZE);
 
         switch(i) {
             case 0: //args*
@@ -61,6 +62,7 @@ void create_task_folder(TASK task) {
                         exit(1);
                     }
                 }
+                close(fd);
                 break;
             case 1: //timing
                 timing_string_from_timing(buf, &(task.timing));
@@ -68,10 +70,13 @@ void create_task_folder(TASK task) {
                     perror("write");
                     exit(1);
                 }
+                close(fd);
+                break;
             default: //others
                 break;
         }
     }
+    free(path);
 }
 
 
@@ -146,9 +151,12 @@ void ensure_directory_exists(const char *path){
 
 
 char* my_cat(char* start, char* end) {
-    char* res = malloc(sizeof(char) * (strlen(start) + strlen(end)) - 1);
+    size_t size = sizeof(char) * (strlen(start) + strlen(end) - 1);
+    char* res = malloc(size);
+    memset(res, 0, size);
     strcat(res, start);
     strcat(res, end);
+
     return res;
 }
 
@@ -160,8 +168,9 @@ void check_exec_time() {
     if (stat("daemon_dir/timings.txt", &st) < 0) {
         return;
     }
-    size_t max_len = 1024;
+    size_t max_len = 256;
     char* buf = malloc(sizeof(char) * 256);
+    memset(buf, 0, 256);
     FILE* file;
     file = fopen("daemon_dir/timings.txt", "r");
     flock(fileno(file), LOCK_EX);
@@ -195,35 +204,39 @@ void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
     int out_fd = -1;
     int err_fd = -1;
 
-    if (ret_file != NULL) {
-        ret_fd = open(ret_file, O_WRONLY | O_CREAT, 0666);
-        if (ret_fd < 0) goto open_error;
-    }
-
-    if (out_file != NULL) {
-        out_fd = open(out_file,  O_WRONLY | O_CREAT, 0666);
-        if (out_fd < 0) goto open_error;
-        if (dup2(out_fd, STDOUT_FILENO) == -1) goto dup_error;
-    }
-    close(out_fd);
-
-    if(err_file != NULL) {
-        err_fd = open(err_file,  O_WRONLY | O_CREAT, 0666);
-        if (err_fd < 0) goto open_error;
-        if (dup2(err_fd, STDERR_FILENO) == -1) goto dup_error;
-    }
-
-    close(err_fd);
     int r = fork();
 
     if (r == 0) {
+
+        if (out_file != NULL) {
+            out_fd = open(out_file,  O_WRONLY | O_CREAT, 0666);
+            if (out_fd < 0) goto open_error;
+            if (dup2(out_fd, STDOUT_FILENO) == -1) goto dup_error;
+        }
+        close(out_fd);
+
+        if(err_file != NULL) {
+            err_fd = open(err_file,  O_WRONLY | O_CREAT, 0666);
+            if (err_fd < 0) goto open_error;
+            if (dup2(err_fd, STDERR_FILENO) == -1) goto dup_error;
+        }
+        close(err_fd);
+
         execvp(argv[0], argv);
         //execvp failed
+        perror("execvp in execute");
         if (ret_fd >= 0) close(ret_fd);
         if (out_fd >= 0) close(out_fd);
         if (err_fd >= 0) close(err_fd);
+        raise(SIGKILL);
         return;
     } else {
+
+        if (ret_file != NULL) {
+            ret_fd = open(ret_file, O_WRONLY | O_CREAT, 0666);
+            if (ret_fd < 0) goto open_error;
+        }
+
         /* the parent process calls wait() on the child */
         if (waitpid(r, &status, 0) > 0) {
             if (WIFEXITED(status)) {
@@ -233,24 +246,35 @@ void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
                 sprintf(buf, "%d", exit_status);
                 write(ret_fd, buf, (size_t) log10(abs((exit_status == 0)?1:exit_status)) + 1) ;
                 close(ret_fd);
+                raise(SIGKILL);
             } else {
                 //child got a problem
-                goto other_error;
+                goto child_error;
             }
         } else {
             //wait failed
-            goto other_error;
+            goto wait_error;
         }
     }
 
     close(ret_fd);
+    raise(SIGKILL);
     return;
 
-    other_error:
-    perror("other error in execute");
+    wait_error:
+    perror("wait error in execute");
     if (ret_fd >= 0) close(ret_fd);
     if (out_fd >= 0) close(out_fd);
     if (err_fd >= 0) close(err_fd);
+    raise(SIGKILL);
+    return;
+
+    child_error:
+    perror("child error in execute");
+    if (ret_fd >= 0) close(ret_fd);
+    if (out_fd >= 0) close(out_fd);
+    if (err_fd >= 0) close(err_fd);
+    raise(SIGKILL);
     return;
 
     open_error:
@@ -258,6 +282,7 @@ void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
     if (ret_fd >= 0) close(ret_fd);
     if (out_fd >= 0) close(out_fd);
     if (err_fd >= 0) close(err_fd);
+    raise(SIGKILL);
     return;
 
     dup_error:
@@ -265,6 +290,7 @@ void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
     if (ret_fd >= 0) close(ret_fd);
     if (out_fd >= 0) close(out_fd);
     if (err_fd >= 0) close(err_fd);
+    raise(SIGKILL);
     return;
 
 }
@@ -295,18 +321,22 @@ void exec_task_from_id(uint64_t task_id) {
     strcat(date_buf, ".txt");
 
     char err_file[256];
+    memset(err_file, 0, 256);
     strcat(strcpy(err_file, task_dir), "error_out/");
     strcat(err_file, date_buf);
 
     char ret_file[256];
+    memset(ret_file, 0, 256);
     strcat(strcpy(ret_file, task_dir), "return_values/");
     strcat(ret_file, date_buf);
 
     char out_file[256];
+    memset(out_file, 0, 256);
     strcat(strcpy(out_file, task_dir), "standard_out/");
     strcat(out_file, date_buf);
 
     char cmdLine_file[256];
+    memset(cmdLine_file, 0, 256);
     strcat(strcpy(cmdLine_file, task_dir), "args.txt");
 
     char* cmdLine = malloc(256);
@@ -328,7 +358,12 @@ void exec_task_from_id(uint64_t task_id) {
 
     close(fd_cmd);
     free(date_buf);
-    execute(argv, ret_file, out_file, err_file);
+
+    if (fork() == 0 ) {
+        execute(argv, ret_file, out_file, err_file);
+    } else {
+        wait(NULL);
+    }
     free(argv);
     free(cmdLine);
 
@@ -389,6 +424,7 @@ int remove_task(u_int64_t taskid) {
 char* last_exec_name(u_int64_t taskid, int is_deleted) {
 
     char* prev = malloc(sizeof(char)*FILE_NAME_LENGTH);
+    memset(prev, 0, FILE_NAME_LENGTH);
 
     char task_dir[1024];
     if (!is_deleted) {
@@ -473,12 +509,13 @@ void send_string(STRING msg) {
     free(last_exec);
 
     int fd = open(file_path, O_RDONLY);
+     printf("%s\n", file_path);
     if (fd < 0) {
         perror("open in send_std");
         exit(1);
     }
     char* content = malloc(sizeof(char) * UINT32_MAX);
-    int n_read = read(fd, content, sizeof(content));
+    int n_read = read(fd, content, UINT32_MAX);
     if (n_read < 0) {
         perror("read in send_std");
         close(fd);
