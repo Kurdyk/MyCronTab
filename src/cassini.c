@@ -134,7 +134,6 @@ int main(int argc, char *argv[])
   // --------
 
   pipes = init_pipes(pipes_directory);
-  //free(pipes_directory);
   if (pipes == NULL)
   {
     goto error;

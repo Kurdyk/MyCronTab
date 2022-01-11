@@ -157,7 +157,7 @@ char* time_output_from_int64(int64_t sec) {
 STRING* read_string(int request_pipe)
 {
     STRING *string = malloc(sizeof(STRING));
-    read(request_pipe, &(string->length), sizeof(string->length));
+    read(request_pipe, &(string->length), sizeof(be32toh(string->length)));
     string->length = be32toh(string->length);
     string->content = malloc((string->length + 1) * sizeof(char));
     memset(string->content, 0, (string->length + 1) * sizeof(char));

@@ -26,6 +26,10 @@
 
 
 void create_task_folder(TASK task) {
+    /**
+     * Création du dossier lié à un tâche avec enregistrement des ses arguments, son temps d'exécution,
+     * et des dossiers pour sauvegarder les sorties standards et erreurs ainsi que les codes de retour.
+     */
     char* directory = "daemon_dir";
     char* path = malloc(128);
     char* files[] = {"/args.txt", "/task_timing.txt", "/return_values/", "/standard_out/", "/error_out/"};
@@ -35,12 +39,12 @@ void create_task_folder(TASK task) {
     for (int i = 0; i < 5; i++) {
         char* file_name = my_cat(path, files[i]);
         int fd;
-        if (i < 2) {
+        if (i < 2) { //Cas de création d'un fichier simple
             if ((fd = open(file_name, O_WRONLY | O_CREAT, 0666)) == -1) {
                 perror("open");
                 exit(1);
             }
-        } else {
+        } else { //Cas de création d'un dossier
             ensure_directory_exists(file_name);
         }
         free(file_name);
@@ -48,7 +52,7 @@ void create_task_folder(TASK task) {
         memset(buf, 0, TIMING_TEXT_MIN_BUFFERSIZE);
 
         switch(i) {
-            case 0: //args*
+            case 0: //Recopie des arguments demandés dans le fichier args.txt
                 ;
                 u_int32_t argc = task.commandline->argc;
                 for (int i = 0; i < argc; i++) {
@@ -64,7 +68,7 @@ void create_task_folder(TASK task) {
                 }
                 close(fd);
                 break;
-            case 1: //timing
+            case 1: //Recopie du timing demandé dans timing.txt
                 timing_string_from_timing(buf, &(task.timing));
                 if (write(fd, buf, strlen(buf)) < 0) {
                     perror("write");
@@ -81,7 +85,11 @@ void create_task_folder(TASK task) {
 
 
 void notify_timing(TASK task) {
+    /**
+     * A chaque création de tâches on ajoute son timing à un fichier qui sera lu pour déclencher les exécutions
+     */
     int fd = open("daemon_dir/timings.txt", O_WRONLY | O_APPEND | O_CREAT, 0666);
+    flock(fd, LOCK_EX);
     char buf[TIMING_TEXT_MIN_BUFFERSIZE];
     sprintf(buf, "%ld ", task.taskid);
     if (write(fd, buf, strlen(buf)) < 0) {
@@ -97,10 +105,14 @@ void notify_timing(TASK task) {
         perror("write");
         exit(1);
     }
+    flock(fd, LOCK_UN);
     close(fd);
 }
 
 void create_task(TASK task, u_int64_t* taskid) {
+    /**
+     * Centralise les différentes étapes de la création d'une tâche.
+     */
     set_taskid(&task, taskid);
     create_task_folder(task);
     notify_timing(task);
@@ -114,12 +126,18 @@ void create_task(TASK task, u_int64_t* taskid) {
 
 
 void set_taskid(TASK* task, uint64_t* next_id) {
+    /**
+     * Attribue son numéro à une tâche et incrémente le compteur de numéro de tâche.
+     */
     task->taskid = *next_id;
     *next_id += 1;
 }
 
 
 int is_number(char* input) {
+    /**
+     * Retourne 1 si input représente un nombre, 0 sinon.
+     */
     for (int i = 0; i < strlen(input); i++) {
         if(!isdigit(*(input + i))) return 0;
     }
@@ -127,6 +145,9 @@ int is_number(char* input) {
 }
 
 void set_next_id(uint64_t* next_id, char* path) {
+    /**
+     * Au lancement de Saturnd, cherche le prochain numéro de tâche disponible.
+     */
     DIR *dir = opendir(path);
     struct dirent *entry;
     while ((entry = readdir(dir))) {
@@ -142,6 +163,9 @@ void set_next_id(uint64_t* next_id, char* path) {
 /// Structure helpers
 
 void ensure_directory_exists(const char *path){
+    /**
+     * Vérifie si un dictionnaire existe, le crée sinon.
+     */
     struct stat st = {0};
     if (stat(path, &st) == -1) {
         mkdir(path, 0777);
@@ -151,6 +175,10 @@ void ensure_directory_exists(const char *path){
 
 
 char* my_cat(char* start, char* end) {
+    /**
+     * Alloue une chaîne de caractère pour concaténer start et end.
+     * A FREE
+     */
     size_t size = sizeof(char) * (strlen(start) + strlen(end) + 10);
     char* res = malloc(size);
     memset(res, 0, size);
@@ -164,8 +192,11 @@ char* my_cat(char* start, char* end) {
 /// Execution
 
 void check_exec_time() {
+    /**
+     * Vérifie le fichier de temps d'exécution et lance les tâches à exécuter.
+     */
     struct stat st = {0};
-    if (stat("daemon_dir/timings.txt", &st) < 0) {
+    if (stat("daemon_dir/timings.txt", &st) < 0) { //Cas pas de tâche
         return;
     }
     size_t max_len = 256;
@@ -173,7 +204,7 @@ void check_exec_time() {
     memset(buf, 0, 256);
     FILE* file;
     file = fopen("daemon_dir/timings.txt", "r");
-    flock(fileno(file), LOCK_EX);
+    flock(fileno(file), LOCK_EX); //On s'assure que Saturnd ne modifie pas le fichier en même temps.
     while (getline(&buf, &max_len, file) > 0) {
         int i = 0;
         while (isspace(buf[i]) == 0) {
@@ -194,8 +225,10 @@ void check_exec_time() {
 
 
 void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
-
-
+    /**
+     * Lance l'exécution d'une tâche après redirection de la sortie et de l'erreur standards.
+     * Un fork permet au père de récupérer le code de retour du fils de de le conserver dans un fichier.
+     */
     int status;
     int ret_fd = -1;
     int out_fd = -1;
@@ -267,8 +300,7 @@ void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
     raise(SIGKILL);
     return;
 
-    child_error:
-    //perror("child error in execute");
+    child_error: //Peut arriver en cas de commande inconnue.
     if (ret_fd >= 0) close(ret_fd);
     if (out_fd >= 0) close(out_fd);
     if (err_fd >= 0) close(err_fd);
@@ -294,8 +326,9 @@ void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
 }
 
 int line_to_tokens(char *line, char **tokens) {
-    /*
+    /**
      * Gotten from TP8.
+     * Permet de parser les arguments d'une tâche pour execution.
      */
     int i = 0;
     memset(tokens, 0, MAX_TOKENS*sizeof(char*));
@@ -311,10 +344,14 @@ int line_to_tokens(char *line, char **tokens) {
 }
 
 void exec_task_from_id(uint64_t task_id) {
+    /**
+     * Lance la tâche de numéro task_id.
+     * Source de memory leaks mais je n'arrive pas à les corriger.
+     */
     char task_dir[256];
     sprintf(task_dir, "daemon_dir/%ld/", task_id);
 
-    char* date_buf = time_output_from_int64(time(NULL));
+    char* date_buf = time_output_from_int64(time(NULL)); /*Le nom du fichier dépend de la date actuelle.*/
     date_buf = realloc(date_buf, sizeof(char) * FILE_NAME_LENGTH);
     strcat(date_buf, ".txt");
 
@@ -374,7 +411,11 @@ void exec_task_from_id(uint64_t task_id) {
 
 int remove_task(u_int64_t taskid) {
 
-    //On conserve comme ça les valeurs de retour en cas de volonté de consultation ultérieure.
+    /**
+     * Supprime la ligne de la tâche dans timings.txt, ce qui empêche son exécution.
+     * Déplace le dossier de la tâche dans le dossier trash_bin.
+     * On conserve comme ça les valeurs de retour en cas de volonté de consultation ultérieure.
+     */
     char path[64];
     sprintf(path, "daemon_dir/%ld", taskid);
     char new_path[64];
@@ -420,7 +461,9 @@ int remove_task(u_int64_t taskid) {
 
 
 char* last_exec_name(u_int64_t taskid, int is_deleted) {
-
+    /**
+     * Donne le nom de fichier de la dernière exécution d'une tâche, celui-ci correspond à la date d'exécution.
+     */
     char* prev = malloc(sizeof(char)*FILE_NAME_LENGTH);
     memset(prev, 0, FILE_NAME_LENGTH);
 
@@ -443,6 +486,9 @@ char* last_exec_name(u_int64_t taskid, int is_deleted) {
 
 
 void send_string(STRING msg) {
+    /**
+     * Envoie une string à Cassini.
+     */
     int clyde = open_rep();
     uint32_t size = htobe32(msg.length);
     if (write(clyde, &size, sizeof(uint32_t)) < 0) goto error;
@@ -459,6 +505,10 @@ void send_string(STRING msg) {
 
 
  void send_std(char* name, uint64_t taskid) {
+    /**
+     * En fonction de ce qui est demandé par name, envoie à Cassini la dernière sortie standard ou erreur de la tâche
+     * spécifiée par taskid.
+     */
      struct stat st;
 
      int clyde;
@@ -507,7 +557,6 @@ void send_string(STRING msg) {
     free(last_exec);
 
     int fd = open(file_path, O_RDONLY);
-     printf("%s\n", file_path);
     if (fd < 0) {
         perror("open in send_std");
         exit(1);
@@ -540,6 +589,10 @@ void send_string(STRING msg) {
 /// Time and exit code
 
 void send_time_and_exitcode(u_int64_t taskid) {
+    /**
+     * Récupère toutes les dates d'exécution (par le nom des fichiers résultants d'une exécution) et les codes de retour
+     * associés.
+     */
     struct stat st;
 
     int clyde;
@@ -576,6 +629,7 @@ void send_time_and_exitcode(u_int64_t taskid) {
     struct dirent* entry;
 
     while ((entry = readdir(dir))) {
+        //Trouve le nombre d'exécutions à envoyer.
         if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
             nb_exec++;
         }
@@ -635,6 +689,9 @@ void send_time_and_exitcode(u_int64_t taskid) {
 /// Terminate
 
 void terminate() {
+    /**
+     * Envoie à Cassini que la demande de terminaison est bien reçue, termine dans saturnd.c.
+     */
     uint16_t rep = htobe16(SERVER_REPLY_OK);
     int clyde = open_rep();
     write(clyde, &rep, sizeof(uint16_t));

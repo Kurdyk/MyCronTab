@@ -24,6 +24,9 @@
 
 
 int open_rep() {
+    /**
+     * Ouvre le tube de réponse
+     */
     char * pipes_directory = malloc(sizeof(char) * 100);
     //sprintf(pipes_directory, "/tmp/%s/saturnd/pipes", username);
     sprintf(pipes_directory, "/tmp");
@@ -42,6 +45,9 @@ int open_rep() {
 }
 
 void open_pipes(char *path){
+    /**
+     * Génère les pipes.
+     */
     //ensure_directory_exists(path);
     char * bonny_name = malloc(sizeof(char) * 110);
     char * clyde_name = malloc(sizeof(char) * 110);
@@ -50,8 +56,6 @@ void open_pipes(char *path){
 
     mkfifo(bonny_name, PIPES_MODE);
     mkfifo(clyde_name, PIPES_MODE);
-
-    printf("%s\n%s\n", bonny_name, clyde_name);
 
     printf("On a crée Bonny and Clyde\n");
     free(bonny_name);
@@ -82,31 +86,39 @@ int main(int argc, char **argv){
     //sprintf(bonny_name, "%s/bonny.pipe", pipes_directory);
     int bonny = open(bonny_name, O_NONBLOCK | O_RDONLY);
     int clyde;
-    free(bonny_name);
     free(pipes_directory);
 
     pid_t child_pid = fork();
-    if (child_pid == 0) { //partie execution de taches
+    if (child_pid == 0) { //Partie execution de taches
         while(1) {
             sleep(2);
             check_exec_time();
             sleep(8);
         }
-    } else {
+    } else { //Partie communication avec Cassini
         uint16_t *demande = malloc(sizeof(u_int16_t));
+
         struct pollfd survey[1];
 
         survey[0].fd = bonny;
         survey[0].events = POLLIN;
 
+
         u_int64_t *id_buf;
         u_int64_t id;
+        int n_read;
+
 
         while (1) {
-            //break;
+
             poll(survey, 1, -1);
+            if (survey[0].revents & POLLHUP) {
+                close(bonny);
+                bonny = open(bonny_name, O_NONBLOCK | O_RDONLY);
+                continue;
+            }
             // lecture dans le tube
-            if (read(bonny, demande, sizeof(uint16_t)) > 0) {
+            if ((n_read = read(bonny, demande, sizeof(uint16_t))) > 0) {
                 uint16_t operation = be16toh(*demande);
                 switch (operation) {
                     case CLIENT_REQUEST_CREATE_TASK:
@@ -160,55 +172,30 @@ int main(int argc, char **argv){
                         free(id_buf);
                         send_time_and_exitcode(id);
                         break;
-
+                    default:
+                        break;
                 }
-                //printf("Message de cassini : %s\n", demande);
             }
 
-            //printf("On a scanné, et on a rien trouvé");
-            sleep(1);
+            if (n_read < 0) {
+                printf("%d", n_read);
+                perror("read in main saturnd");
+                close(bonny);
+                free(bonny_name);
+                kill(child_pid, SIGKILL);
+                exit(EXIT_FAILURE);
+            }
+
         }
-        free(demande);
 
-        //test
-        STRING arg;
-        arg.length = 5;
-        arg.content = "echo";
-
-        STRING arg1;
-        arg1.length = 5;
-        arg1.content = "blab";
-
-        STRING *blop[] = {&arg, &arg1};
-
-        COMMANDLINE cmdline;
-        cmdline.argc = 2;
-        cmdline.arguments = blop;
-
-        TIMING t;
-        t.minutes = 1;
-        t.hours = 18;
-        t.daysofweek = 6;
-
-        TASK test;
-        test.timing = t;
-        test.commandline = &cmdline;
-
-
-        //create_task(test, &next_id);
-        //exec_task_from_id(1);
-        //remove_task(4);
-        //send_std("error_out", 1);
-        //send_time_and_exitcode(1);
-
-        sleep(1);
         goto exit_succes;
     }
 
     exit_succes:
-        close(bonny);
+    free(bonny_name);
+    close(bonny);
         kill(child_pid, SIGKILL);
-        return EXIT_SUCCESS;
+        exit(EXIT_SUCCESS);
 
 }
 
