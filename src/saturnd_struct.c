@@ -16,6 +16,7 @@
 
 #include "../include/timing.h"
 #include "../include/timing-text-io.h"
+#include "timing.h"
 #include "../include/saturnd_struct.h"
 #include "../include/helpers.h"
 #include "../include/server-reply.h"
@@ -212,11 +213,37 @@ void check_exec_time() {
         }
         char* subtext_id = malloc(sizeof(char) * i + 1);
         memset(subtext_id, 0, sizeof(char) * i + 1);
-        strncpy(subtext_id,&buf[0],i);
+        strncpy(subtext_id, buf, i);
         uint64_t id = atol(subtext_id);
         free(subtext_id);
+
         //TODO : if the atcual timing is right do task
-        exec_task_from_id(id);
+        TIMING * timing = malloc(sizeof(TIMING));
+        char delim[] = " \n";
+        char * mins = strtok((buf + i  + 1), delim);
+        char * hours = strtok(NULL, delim);
+        char * days = strtok(NULL, delim);
+        char * reste = strtok(NULL, delim);
+        //printf("Parsé : Jour %s à %s:%s\n", days, hours, mins);
+        timing_from_strings(timing, mins, hours, days);
+        time_t now = time(NULL);
+        struct tm * time_now = localtime(&now);
+        //printf("On est le %d jour de la semaine. Il est %d:%d\n", time_now->tm_wday, time_now->tm_hour, time_now->tm_min);
+        if ((timing->hours & (1<<(time_now->tm_hour)))){
+            if ((timing->minutes & (1<<(time_now->tm_min)))){
+                if ((timing->daysofweek & (1<<(time_now->tm_wday)))){
+                    //printf("Lancement de la tache %d\n", id);
+                    exec_task_from_id(id);
+                } else {
+                    //printf("Erreur dans le jour\n");
+                }
+            } else {
+                //printf("Erreur dans les minutes\n");
+            }
+        } else {
+            //printf("Erreur dans les heures\n");
+        }
+        free(timing);
     }
     flock(fileno(file), LOCK_UN);
     fclose(file);
@@ -258,7 +285,8 @@ void execute(char* argv[], char* ret_file, char* out_file, char* err_file) {
         if (ret_fd >= 0) close(ret_fd);
         if (out_fd >= 0) close(out_fd);
         if (err_fd >= 0) close(err_fd);
-        raise(SIGKILL);
+        //raise(SIGKILL);
+        _exit(127);
         return;
 
     } else {
@@ -395,8 +423,6 @@ void exec_task_from_id(uint64_t task_id) {
 
     if (fork() == 0 ) {
         execute(argv, ret_file, out_file, err_file);
-    } else {
-        wait(NULL);
     }
 
     free(argv);

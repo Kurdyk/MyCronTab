@@ -212,8 +212,10 @@ u_int64_t int64_output_from_timestamp(char* timestamp) {
 
 void free_task(TASK* task) {
     for(int i = 0; i < task->commandline->argc; i++) {
+        free(task->commandline->arguments[i]->content);
         free(task->commandline->arguments[i]);
     }
+    free(task->commandline->arguments);
     free(task->commandline);
     free(task);
 }

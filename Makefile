@@ -1,5 +1,5 @@
 CC      ?= gcc
-CFLAGS  ?= -Wall -g
+CFLAGS  ?= -Wall
 INCLUDES ?= -I include/
 
 all: cassini saturnd
@@ -12,7 +12,7 @@ cassini: cassini.o timing-text-io.o helpers.o
 	@$(CC) $(INCLUDES) -c $< -o _build/$@
 
 saturnd: saturnd.o saturnd_struct.o
-	$(CC) $(CFLAGS) -o saturnd _build/saturnd.o _build/timing-text-io.o _build/helpers.o _build/saturnd_struct.o -lm
+	$(CC) $(CFLAGS) -o saturnd _build/saturnd.o _build/timing-text-io.o _build/helpers.o _build/saturnd_struct.o -g -lm
 
 distclean:
 	$(RM) -r cassini saturnd daemon_dir/ *.o _build/
