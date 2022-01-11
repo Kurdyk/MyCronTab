@@ -20,9 +20,6 @@
 
 #define PIPES_MODE 0777
 
-
-
-
 int open_rep() {
     /**
      * Ouvre le tube de réponse
