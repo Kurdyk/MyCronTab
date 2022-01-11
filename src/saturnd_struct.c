@@ -26,14 +26,16 @@
 
 int getLine(int fd, char * buffer, int max_length){
     int r = read(fd, buffer, max_length);
-    for (int i = 0; i < r; i ++){
+    int i;
+    for (i = 0; i < r; i ++){
         if (*(buffer + i) == '\n'){
             break;
         } 
     }
 
     *(buffer + i) = 0;
-    lseek(fd, (i  - r + 2), SEEK_CUR);
+    printf("%s\n", buffer);
+    lseek(fd, (i  - r + 1), SEEK_CUR);
     return i;
 }
 
@@ -178,6 +180,8 @@ void set_next_id(uint64_t* next_id, char* path) {
 
 /// List tasks
 
+/*
+
 void listTasks(int clyde){
     struct stat buffer;
     if (stat("daemon_dir/timings.txt", &buffer) < 0){
@@ -197,6 +201,7 @@ void listTasks(int clyde){
     }
 }
 
+ */
 
 /// Structure helpers
 
@@ -254,7 +259,6 @@ void check_exec_time() {
         uint64_t id = atol(subtext_id);
         free(subtext_id);
 
-        //TODO : if the atcual timing is right do task
         TIMING * timing = malloc(sizeof(TIMING));
         char delim[] = " \n";
         char * mins = strtok((buf + i  + 1), delim);
@@ -473,7 +477,6 @@ void exec_task_from_id(uint64_t task_id) {
 
 
 int remove_task(u_int64_t taskid) {
-
     /**
      * Supprime la ligne de la tâche dans timings.txt, ce qui empêche son exécution.
      * Déplace le dossier de la tâche dans le dossier trash_bin.
@@ -487,12 +490,12 @@ int remove_task(u_int64_t taskid) {
 
     size_t max_len = 1024;
     char* buf = malloc(sizeof(char) * 1024);
-    FILE* file = fopen("daemon_dir/timings.txt", "r+");
-    flock(fileno(file), LOCK_EX);
-    FILE* new = fopen("daemon_dir/timings_buff.txt", "w");
+    int old = open("daemon_dir/timings.txt", O_RDONLY);
+    flock(old, LOCK_EX);
+    int new = open("daemon_dir/timings_buff.txt", O_CREAT | O_WRONLY, 0666);
     ssize_t nread = 0;
     int find = 0;
-    while ((nread = getline(&buf, &max_len, file)) > 0) {
+    while ((nread = getLine(old, buf, max_len)) > 0) {
         int i = 0;
         while (isspace(buf[i]) == 0) {
             i++;
@@ -503,15 +506,16 @@ int remove_task(u_int64_t taskid) {
         if (id == taskid) {
             find = 1;
         } else {
-            fputs(buf, new);
+            strcat(buf, "\n");
+            write(new, buf, strlen(buf));
         }
     }
     remove("daemon_dir/timings.txt");
     rename("daemon_dir/timings_buff.txt", "daemon_dir/timings.txt");
     chmod("daemon_dir/timings.txt", 0666);
-    flock(fileno(file), LOCK_UN);
-    fclose(file);
-    fclose(new);
+    flock(old, LOCK_UN);
+    close(old);
+    close(new);
     free(buf);
     return find;
 

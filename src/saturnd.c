@@ -20,9 +20,6 @@
 
 #define PIPES_MODE 0777
 
-
-
-
 int open_rep() {
     /**
      * Ouvre le tube de réponse
@@ -133,8 +130,9 @@ int main(int argc, char **argv){
                         goto exit_succes;
                         break;
                     case CLIENT_REQUEST_LIST_TASKS:
+                        ;
                         int clyde = open_rep();
-                        listTasks(clyde);
+                        //listTasks(clyde);
                         close(clyde);
                         break;
                     case CLIENT_REQUEST_REMOVE_TASK:
