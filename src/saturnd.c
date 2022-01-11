@@ -99,9 +99,8 @@ int main(int argc, char **argv){
     pid_t child_pid = fork();
     if (child_pid == 0) { //Partie execution de taches
         while(1) {
-            sleep(2);
             check_exec_time();
-            sleep(8);
+            sleep(60);
         }
     } else { //Partie communication avec Cassini
         uint16_t *demande = malloc(sizeof(u_int16_t));
