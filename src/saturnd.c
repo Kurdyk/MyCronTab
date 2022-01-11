@@ -132,6 +132,11 @@ int main(int argc, char **argv){
                         free(demande);
                         goto exit_succes;
                         break;
+                    case CLIENT_REQUEST_LIST_TASKS:
+                        int clyde = open_rep();
+                        listTasks(clyde);
+                        close(clyde);
+                        break;
                     case CLIENT_REQUEST_REMOVE_TASK:
                         id_buf = malloc(sizeof(u_int64_t));
                         read(bonny, id_buf, sizeof(u_int64_t));

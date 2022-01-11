@@ -23,6 +23,21 @@
 #include "../include/saturnd.h"
 
 
+
+int getLine(int fd, char * buffer, int max_length){
+    int r = read(fd, buffer, max_length);
+    for (int i = 0; i < r; i ++){
+        if (*(buffer + i) == '\n'){
+            break;
+        } 
+    }
+
+    *(buffer + i) = 0;
+    lseek(fd, (i  - r + 2), SEEK_CUR);
+    return i;
+}
+
+
 /// Create task
 
 
@@ -158,6 +173,28 @@ void set_next_id(uint64_t* next_id, char* path) {
         }
     }
     closedir(dir);
+}
+
+
+/// List tasks
+
+void listTasks(int clyde){
+    struct stat buffer;
+    if (stat("daemon_dir/timings.txt", &buffer) < 0){
+        uint16_t reptype = htobe(SERVER_REPLY_OK);
+        uint32_t nbtasks = 0
+        clyde.write(reptype);
+        clyde.write(nbtasks);
+        return;
+    }
+    int timings = open("daemon_dir/timings.txt", O_RDONLY);
+    flock(timings, LOCK_EX);
+    int max_length = 256;
+    char * buffer = malloc(max_length);
+    uint32_t nbtasks = 0;
+    while (getLine(fd, buffer, max_length) != 0){
+        
+    }
 }
 
 

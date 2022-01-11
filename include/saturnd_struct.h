@@ -28,6 +28,10 @@ void set_taskid(TASK* task, uint64_t* next_id);
 void set_next_id(uint64_t* next_id, char* path);
 char* my_cat(char* start, char* end);
 
+/// List tasks
+
+void listTasks(int clyde);
+
 /// Execution
 
 void ensure_directory_exists(const char *path);
