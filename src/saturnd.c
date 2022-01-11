@@ -80,7 +80,8 @@ int main(int argc, char **argv){
     ensure_directory_exists(path1);
     sprintf(path1, "/tmp/%s/saturnd", username);
     ensure_directory_exists(path1);
-    sprintf(path1, "/tmp/%s/saturnd/pipe", username);
+    sprintf(path1, "/tmp/%s/saturnd/pipes", username);
+    ensure_directory_exists(path1);
 
 
     char * pipes_directory = malloc(sizeof(char) * 100);

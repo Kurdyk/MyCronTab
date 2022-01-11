@@ -191,7 +191,6 @@ COMMANDLINE * createCOMMANDLINE(char * commandline){
     while (strtok(NULL, " ") != NULL){
         argc++;
     }
-    printf("Nombre d'arguments : %d", argc);
     free(cpy1);
     COMMANDLINE * cmd = malloc(sizeof(COMMANDLINE));
     cmd->argc = argc;
@@ -205,7 +204,9 @@ COMMANDLINE * createCOMMANDLINE(char * commandline){
         s->length = l;
         s->content = malloc(l);
         memset(s->content, 0, l);
+        strcpy(s->content, arg);
         cmd->arguments[i] = s;
+        arg = strtok(NULL, " ");
     }
     return cmd;
 }
@@ -241,7 +242,6 @@ void listTasks(int clyde){
         nbtasks++;
     }
 
-    printf("NOMBRE DE TACHES SUR TON PULL : %d\n", nbtasks);
     uint16_t reptype = htobe16(SERVER_REPLY_OK);
     uint32_t nbtasks_r = htobe32(nbtasks);
     write(clyde, &reptype, sizeof(uint16_t));
@@ -251,23 +251,17 @@ void listTasks(int clyde){
 
     while (getLine(timings, buff, max_length) != 0){
         taskid_s = strtok(buff, " ");
-        printf("TASKID %s\n", taskid_s);
         mins = strtok(NULL, " ");
-        printf("MINUTES %s\n", mins);
         hours = strtok(NULL, " ");
-        printf("HEURES %s\n", hours);
         days = strtok(NULL, " ");
-        printf("DAYS %s\n", days);
         reste = strtok(NULL, " ");
         timing_from_strings(&t, mins, hours, days);
         memset(filename, 0, 1024);
         sprintf(filename, "daemon_dir/%s/args.txt", taskid_s);
-        printf("FILENAME %s\n", filename);
         command_file = open(filename, O_RDONLY);
         memset(commandline_s, 0, 1024);
         int r = read(command_file, commandline_s, max_length);
         close(command_file);
-        printf("COMMANDLINE_S %s\n", commandline_s);
         cmd = createCOMMANDLINE(commandline_s);
         uint64_t taskid = htobe64(atol(taskid_s));
         write(clyde, &taskid, sizeof(uint64_t));
@@ -281,7 +275,6 @@ void listTasks(int clyde){
         for (int i = 0; i < cmd->argc; i++){
             cmd->arguments[i]->length = htobe32(cmd->arguments[i]->length);
             write(clyde, &(cmd->arguments[i]->length), sizeof(uint32_t));
-            printf("ON ENVOIE %s\n", cmd->arguments[i]->content);
             write(clyde, cmd->arguments[i]->content, strlen(cmd->arguments[i]->content));
             free(cmd->arguments[i]->content);
             free(cmd->arguments[i]);
