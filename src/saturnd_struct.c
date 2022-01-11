@@ -26,7 +26,8 @@
 
 int getLine(int fd, char * buffer, int max_length){
     int r = read(fd, buffer, max_length);
-    for (int i = 0; i < r; i ++){
+    int i;
+    for (i = 0; i < r; i ++){
         if (*(buffer + i) == '\n'){
             break;
         } 
@@ -178,22 +179,45 @@ void set_next_id(uint64_t* next_id, char* path) {
 
 /// List tasks
 
+
+void sendCommandline(int clyde, char * commandline){
+    char * arg = strtok(commandline, " ");
+    int l;
+    while (arg != NULL){
+        l = strlen(arg);
+
+    }
+}
+
 void listTasks(int clyde){
     struct stat buffer;
     if (stat("daemon_dir/timings.txt", &buffer) < 0){
-        uint16_t reptype = htobe(SERVER_REPLY_OK);
-        uint32_t nbtasks = 0
-        clyde.write(reptype);
-        clyde.write(nbtasks);
+        uint16_t reptype = htobe16(SERVER_REPLY_OK);
+        uint32_t nbtasks = 0;
+        write(clyde, &reptype, sizeof(uint16_t));
+        write(clyde, &nbtasks, sizeof(uint32_t));
         return;
     }
     int timings = open("daemon_dir/timings.txt", O_RDONLY);
     flock(timings, LOCK_EX);
     int max_length = 256;
-    char * buffer = malloc(max_length);
+    char * buff = malloc(max_length);
     uint32_t nbtasks = 0;
-    while (getLine(fd, buffer, max_length) != 0){
-        
+    int command_file;
+    uint64_t taskid;
+    char * filename = malloc(1024);
+    char * taskid_s;
+    char * timing_s;
+    char * commandline_s;
+    char * reste;
+    while (getLine(timings, buff, max_length) != 0){
+        taskid_s = strtok(buff, " ");
+        timing_s = strtok(NULL, " ");
+        commandline_s = strtok(NULL, " ");
+        reste = strtok(NULL, " ");
+        sprintf(filename, "daemon_dir/%s/args.txt", taskid_s);
+        command_file = open(filename, O_RDONLY);
+        //int r = read(command_file, commandline_s, )
     }
 }
 
