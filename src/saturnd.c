@@ -24,9 +24,12 @@ int open_rep() {
     /**
      * Ouvre le tube de réponse
      */
+    char * username = malloc(sizeof(char) * 50);
+    getlogin_r(username, 50);
     char * pipes_directory = malloc(sizeof(char) * 100);
-    //sprintf(pipes_directory, "/tmp/%s/saturnd/pipes", username);
-    sprintf(pipes_directory, "/tmp");
+    sprintf(pipes_directory, "/tmp/%s/saturnd/pipes", username);
+    free(username);
+    //sprintf(pipes_directory, "/tmp");
     char *clyde_name = malloc(sizeof(char) * 110);
     //sprintf(clyde_name, "%s/saturnd-reply-pipe", pipes_directory);
     sprintf(clyde_name, "%s/saturnd-reply-pipe", pipes_directory);
@@ -72,10 +75,17 @@ int main(int argc, char **argv){
 
     char * username = malloc(sizeof(char) * 50);
     getlogin_r(username, 50);
+    char path1[128];
+    sprintf(path1, "/tmp/%s", username);
+    ensure_directory_exists(path1);
+    sprintf(path1, "/tmp/%s/saturnd", username);
+    ensure_directory_exists(path1);
+    sprintf(path1, "/tmp/%s/saturnd/pipe", username);
+
 
     char * pipes_directory = malloc(sizeof(char) * 100);
-    //sprintf(pipes_directory, "/tmp/%s/saturnd/pipes", username);
-    sprintf(pipes_directory, "/tmp");
+    sprintf(pipes_directory, "/tmp/%s/saturnd/pipes", username);
+    //sprintf(pipes_directory, "/tmp");
     free(username);
     open_pipes(pipes_directory);
     char *bonny_name = malloc(sizeof(char) * 110);

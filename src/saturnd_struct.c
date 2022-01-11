@@ -25,6 +25,7 @@
 
 
 int getLine(int fd, char * buffer, int max_length){
+    memset(buffer, 0, max_length);
     int r = read(fd, buffer, max_length);
     int i;
     for (i = 0; i < r; i ++){
@@ -180,13 +181,33 @@ void set_next_id(uint64_t* next_id, char* path) {
 /// List tasks
 
 
-void sendCommandline(int clyde, char * commandline){
-    char * arg = strtok(commandline, " ");
-    int l;
-    while (arg != NULL){
-        l = strlen(arg);
-
+COMMANDLINE * createCOMMANDLINE(char * commandline){
+    char * cpy1 = malloc(strlen(commandline));
+    char * cpy2 = malloc(strlen(commandline));
+    strcpy(cpy1, commandline);
+    strcpy(cpy2, commandline);
+    char * arg = strtok(cpy1, " ");
+    int argc = 1;
+    while (strtok(NULL, " ") != NULL){
+        argc++;
     }
+    printf("Nombre d'arguments : %d", argc);
+    free(cpy1);
+    COMMANDLINE * cmd = malloc(sizeof(COMMANDLINE));
+    cmd->argc = argc;
+    cmd->arguments = malloc(argc * sizeof(STRING));
+    arg = strtok(cpy2, " ");
+    STRING * s;
+    int l;
+    for (int i = 0; i < argc; i++){
+        l = strlen(arg);
+        s = malloc(sizeof(STRING));
+        s->length = l;
+        s->content = malloc(l);
+        memset(s->content, 0, l);
+        cmd->arguments[i] = s;
+    }
+    return cmd;
 }
 
 void listTasks(int clyde){
@@ -207,18 +228,69 @@ void listTasks(int clyde){
     uint64_t taskid;
     char * filename = malloc(1024);
     char * taskid_s;
-    char * timing_s;
-    char * commandline_s;
+    char * mins;
+    char * hours;
+    char * days;
+    char * commandline_s = malloc(1024);
     char * reste;
+    TIMING t;
+
+    COMMANDLINE * cmd;
+
+    while (getLine(timings, buff, max_length) != 0){
+        nbtasks++;
+    }
+
+    printf("NOMBRE DE TACHES SUR TON PULL : %d\n", nbtasks);
+    uint16_t reptype = htobe16(SERVER_REPLY_OK);
+    uint32_t nbtasks_r = htobe32(nbtasks);
+    write(clyde, &reptype, sizeof(uint16_t));
+    write(clyde, &nbtasks_r, sizeof(uint32_t));
+
+    lseek(timings, 0, SEEK_SET);
+
     while (getLine(timings, buff, max_length) != 0){
         taskid_s = strtok(buff, " ");
-        timing_s = strtok(NULL, " ");
-        commandline_s = strtok(NULL, " ");
+        printf("TASKID %s\n", taskid_s);
+        mins = strtok(NULL, " ");
+        printf("MINUTES %s\n", mins);
+        hours = strtok(NULL, " ");
+        printf("HEURES %s\n", hours);
+        days = strtok(NULL, " ");
+        printf("DAYS %s\n", days);
         reste = strtok(NULL, " ");
+        timing_from_strings(&t, mins, hours, days);
+        memset(filename, 0, 1024);
         sprintf(filename, "daemon_dir/%s/args.txt", taskid_s);
+        printf("FILENAME %s\n", filename);
         command_file = open(filename, O_RDONLY);
-        //int r = read(command_file, commandline_s, )
+        memset(commandline_s, 0, 1024);
+        int r = read(command_file, commandline_s, max_length);
+        close(command_file);
+        printf("COMMANDLINE_S %s\n", commandline_s);
+        cmd = createCOMMANDLINE(commandline_s);
+        uint64_t taskid = htobe64(atol(taskid_s));
+        write(clyde, &taskid, sizeof(uint64_t));
+        t.minutes = htobe64(t.minutes);
+        t.hours = htobe32(t.hours);
+        write(clyde, &(t.minutes), sizeof(uint64_t));
+        write(clyde, &(t.hours), sizeof(uint32_t));
+        write(clyde, &(t.daysofweek), sizeof(uint8_t));
+        uint32_t argc_r = htobe32(cmd->argc);
+        write(clyde, &(argc_r), sizeof(uint32_t));
+        for (int i = 0; i < cmd->argc; i++){
+            cmd->arguments[i]->length = htobe32(cmd->arguments[i]->length);
+            write(clyde, &(cmd->arguments[i]->length), sizeof(uint32_t));
+            printf("ON ENVOIE %s\n", cmd->arguments[i]->content);
+            write(clyde, cmd->arguments[i]->content, strlen(cmd->arguments[i]->content));
+            free(cmd->arguments[i]->content);
+            free(cmd->arguments[i]);
+        }
+        free(cmd->arguments);
+        free(cmd);
     }
+    flock(timings, LOCK_UN);
+    close(timings);
 }
 
 
