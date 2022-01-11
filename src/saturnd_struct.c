@@ -34,7 +34,6 @@ int getLine(int fd, char * buffer, int max_length){
     }
 
     *(buffer + i) = 0;
-    printf("%s\n", buffer);
     lseek(fd, (i  - r + 1), SEEK_CUR);
     return i;
 }
@@ -265,10 +264,10 @@ void check_exec_time() {
     size_t max_len = 256;
     char* buf = malloc(sizeof(char) * 256);
     memset(buf, 0, 256);
-    FILE* file;
-    file = fopen("daemon_dir/timings.txt", "r");
-    flock(fileno(file), LOCK_EX); //On s'assure que Saturnd ne modifie pas le fichier en même temps.
-    while (getline(&buf, &max_len, file) > 0) {
+    int timings_fd;
+    timings_fd = open("daemon_dir/timings.txt", O_RDONLY);
+    flock(timings_fd, LOCK_EX); //On s'assure que Saturnd ne modifie pas le fichier en même temps.
+    while (getLine(timings_fd, buf, max_len) > 0) {
         int i = 0;
         while (isspace(buf[i]) == 0) {
             i++;
@@ -306,8 +305,8 @@ void check_exec_time() {
         }
         free(timing);
     }
-    flock(fileno(file), LOCK_UN);
-    fclose(file);
+    flock(timings_fd, LOCK_UN);
+    close(timings_fd);
     free(buf);
 }
 
